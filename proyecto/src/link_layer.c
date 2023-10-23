@@ -383,29 +383,29 @@ int llwrite(const unsigned char *buf, int bufSize) {
 ////////////////////////////////////////////////
 // Receives data in packet
 int llread(unsigned char *packet) {
-    int i = 0, j, res, xor, bytes_read, SMFlag = 0, destuffFlag = 0, skip = 0;
+    int x = 0, res, xor, bytes_read, SMFlag = 0, destuffFlag = 0, skip = 0;
     char aux, C_RCV, buf[1], str[1050];
     frameState = stateStart;
-    if(switchread_C_RCV == 0)
+
+    if (switchread_C_RCV == 0)
         C_RCV = C_NS_0;
     else
         C_RCV = C_NS_1;
-
-    while (STOP == FALSE){       // loop for input 
-        res = read(fd,buf,1);   // returns after 5 (1) chars have been input *
+    
+    while (STOP == FALSE) {         // Loop for input
+        res = read (fd, buf, 1);    // Returns after 5 chars have been input
 
         if (res == -1) {
             perror("Error reading from descriptor");
             return -1; // exit the function in case of an error
         }
-        
-        switch(frameState){
 
+        switch(frameState) {
             case stateStart:
                 if (buf[0] == FLAG_RCV)
                     frameState = stateFlagRCV;
                 break;
-
+            
             case stateFlagRCV:
                 if (buf[0] == FLAG_RCV){
                     frameState = stateFlagRCV;
@@ -450,61 +450,65 @@ int llread(unsigned char *packet) {
             case stateBCCOK:
                 frameState = stateStart;
                 break;
-        } 
+        }
 
-        // byte destuffing 
+        // Byte destuffing
         if (buf[0] == 0x5d)
             destuffFlag = 1;
-
-        if (destuffFlag && buf[0] == 0x7c){
-            str[i-1] = 0x5c;
+        
+        if (destuffFlag && buf[0] == 0x7c) {
+            str[x-1] = 0x5c;
             skip = 1;
-        } 
-        else if (destuffFlag && buf[0] == 0x7d){
-            skip = 1;
-        } 
-        // in case it encounters an escape byte, it will just alter the first char and skip the second 
-        if (!skip){
-            str[i] = buf[0];
-            if (i > 0)
-                aux = str[i-1];
-            i++;
         }
-        else{
+        else if (destuffFlag && buf[0] == 0x7d) {
+            skip = 1;
+        }
+
+        // If the program encounters an escape byte it will alter the first char and skip
+
+        if (!skip) {
+            str[x] = buf[0];
+            if (x > 0)
+                aux = str[x-1];
+            x++;
+        }
+        else {
             skip = 0;
             destuffFlag = 0;
         }
 
-        // after it destuffs all data, calculates bcc2 
+        // After destuffing the data it calculates bcc2
 
-        // checks if the current flag is the ending one and if bcc2 is ok 
-        if (buf[0] == FLAG_RCV && SMFlag && i > 0){
-                xor = str[4];
-                for(j = 5; j < i - 2; j++)
-                    xor = xor^str[j];
-                if(aux == xor){
-                    STOP = TRUE;
-                    printf("\n --- FRAME READ OK! ---\n");
-                }
-                else{
-                    printf("XOR VALUE IS: 0x%02x\n Should be: 0x%02x\n", (unsigned int)(xor & 0xff), (unsigned int)(aux & 0xff));
-                    printf("\n --- BCC2 FAILED! Better luck next time ;) ---\n");
-                    return -1;
-                }
-            
+        // Checks if the current flag is the final one and if bcc2 is ok
+        if (buf[0] == FLAG_RCV && SMFlag && x > 0) {
+            xor = str[4];
+
+            for (int i = 5; i < x-2; i++)
+                xor = xor^str[i];
+            if (aux == xor) {
+                STOP = TRUE;
+                printf("---- Frame Read OK ----");
+            }
+            else {      // Error in XOR value
+                printf("XOR value is: 0x%02x\n Should be: 0x%02x\n", (unsigned int)(xor & 0xff), (unsigned int)(aux & 0xff));
+                printf("\n---- BCC2 failed! ----\n");
+                return -1;
+            }
         }
 
-        if(buf[0] == FLAG_RCV)
+        if (buf[0] == FLAG_RCV)
             SMFlag = 1;
+
     }
+
     STOP = FALSE;
     switchread_C_RCV = !switchread_C_RCV;
 
-    for(j = 4; j < i-2; j++)
-        packet[j-4] = str[j];
-    
+    for (int i = 4; i < x-2; i++)
+        packet[i-4] = str[i];
+
     printf("\n\n --- DESTUFFED DATA ---\n\n");
-    bytes_read = i-6;
+    bytes_read = x-6;
 
     sendRR(fd);
 
