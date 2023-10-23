@@ -382,8 +382,7 @@ int llwrite(const unsigned char *buf, int bufSize) {
 // LLREAD
 ////////////////////////////////////////////////
 // Receives data in packet
-int llread(unsigned char *packet)
-{
+int llread(unsigned char *packet) {
     int x = 0, res, xor, bytes_read, SMFlag = 0, destuffFlag = 0, skip = 0;
     char aux, C_RCV, buf[1], str[1050];
     frameState = stateStart;
@@ -394,6 +393,7 @@ int llread(unsigned char *packet)
         C_RCV = C_NS_1;
     
     while (STOP == FALSE) {         // Loop for input
+        printf("Looping...\n");
         res = read (fd, buf, 1);    // Returns after 5 chars have been input
 
         if (res == -1) {
