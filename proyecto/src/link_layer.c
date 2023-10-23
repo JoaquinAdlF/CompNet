@@ -43,8 +43,6 @@ typedef enum{
     stateARCV,
     stateCRCV,
     stateBCCOK,
-    stateOther,
-    stateStop
 } frameStates;
 
 frameStates frameState = stateStart;
@@ -54,7 +52,7 @@ char resendStr[255] = {0}, SET[5], UA[5], DISC[5];
 
 // Picks up alarm
 void alarmPickup() {
-    int reas, i;
+    int res;
     printf("Retrying connection in %d seconds...\n", alarmTime);
 
     res = write(fd, resendStr, resendSize);
@@ -68,8 +66,9 @@ void alarmPickup() {
     alarm(alarmTime);
 }
 
-sendFrame(int fd, unsigned char C) {
+void sendFrame(int fd, unsigned char C) {
     int resFrame;
+    char frame[5];
     frame[0] = FLAG_RCV;    // F
     frame[1] = A_RCV;       // A
     frame[2] = C;           // C
@@ -121,6 +120,16 @@ void processMessage(int fd, char messageType) {
     while (STOP == FALSE) {
         res = read(fd, buf, 1);
 
+        if (res == -1) {
+            perror("Error reading from descriptor");
+            return; // exit the function in case of an error
+        }
+
+        if (res == 0) {
+            printf("End of file/stream reached.\n");
+            return; // exit the function if EOF is reached
+        }
+
         switch (frameState) {
             case stateStart:
                 if (buf[0] == FLAG_RCV)
@@ -154,7 +163,7 @@ void processMessage(int fd, char messageType) {
                 if (buf[0] == FLAG_RCV) {
                     frameState = stateFlagRCV;
                     SMFlag = 0;
-                } else if (buf[0] == A_RCV^messageType || buf[0] == ALT_A_RCV^messageType) {
+                } else if (buf[0] == (A_RCV^messageType) || buf[0] == (ALT_A_RCV^messageType)) {
                     frameState = stateBCCOK;
                     if (messageType != C_SET) STOP = TRUE;
                 } else {
@@ -214,7 +223,7 @@ void sendTux() {
 // Opens a connection using the port parameters, returns -1 on error and 0 on success.
 int llopen(LinkLayer connectionParameters)
 {
-    fd = open(connectionParameters.serialPort, O_RDWR | ONOCTTY);   // Open serial port
+    fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);   // Open serial port
     if (fd < 0) {
         perror(connectionParameters.serialPort);
         exit(1);

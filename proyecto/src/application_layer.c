@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
@@ -36,7 +37,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         fflush(stderr);
 
         // Open file to read and handle error
-        char *file_path = filename;
+        const char *file_path = filename;
         int file_desc = open(file_path, O_RDONLY);
         if (file_desc < 0) {
             fprintf(stderr, "Error opening file: %s\n", file_path);
@@ -98,7 +99,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         fflush(stdout);
         fflush(stderr);
 
-        char *file_path = filename;
+        const char *file_path = filename;
         int file_desc = open(file_path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
         if (file_desc < 0) {
             fprintf(stderr, "Error opening file: %s\n", file_path);
