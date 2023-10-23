@@ -114,7 +114,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
         while (bytes_read >= 0) {
             bytes_read = llread(buffer);
-            fprint("Reading...\n");
+            printf("Reading...\n");
 
             if (bytes_read < 0) {
                 fprintf(stderr, "Error receiving from link layer\n");
