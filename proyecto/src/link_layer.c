@@ -387,13 +387,12 @@ int llread(unsigned char *packet) {
     char aux, C_RCV, buf[1], str[1050];
     frameState = stateStart;
 
-    if (switchread_C_RCV)
+    if (switchread_C_RCV == 0)
         C_RCV = C_NS_0;
     else
         C_RCV = C_NS_1;
     
     while (STOP == FALSE) {         // Loop for input
-        printf("Looping...\n");
         res = read (fd, buf, 1);    // Returns after 5 chars have been input
 
         if (res == -1) {
