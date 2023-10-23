@@ -483,7 +483,7 @@ int llread(unsigned char *packet) {
         if (buf[0] == FLAG_RCV && SMFlag && x > 0) {
             xor = str[4];
 
-            for (int i = 0; i < x-2; i++)
+            for (int i = 5; i < x-2; i++)
                 xor = xor^str[i];
             if (aux == xor) {
                 STOP = TRUE;
