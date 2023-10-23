@@ -306,7 +306,7 @@ int llwrite(const unsigned char *buf, int bufSize) {
     }
 
     char xor = buf[0], auxBuf[2000];
-    for (int i = 0; i < bufSize, i++)
+    for (int i = 0; i < bufSize; i++)
         xor = xor^buf[i];
 
     // Byte stuffing
