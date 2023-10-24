@@ -94,20 +94,6 @@ void sendUA(int fd) {
     sendFrame(fd, C_UA);
 }
 
-void sendRR(int fd) {
-    printf("---- Sending RR ----\n");
-    char C_RCV;
-    if(switchRR == 0)
-        C_RCV = C_RR_1;
-    else
-        C_RCV = C_RR_0;
-
-    sendFrame(fd, C_RCV);
-
-    switchRR = !switchRR;
-
-}
-
 void sendDISC(int fd) {
     printf("--- Sending DISC ---\n");
     sendFrame(fd, C_DISC);
@@ -192,21 +178,104 @@ void readUA(int fd) {
     processMessage(fd, C_UA);
 }
 
-void readRR(int fd) {
-    printf("---- Reading RR ----\n");
-    char C_RCV;
+void readDISC(int fd) {
+    printf("--- Reading DISC ---\n");
+    processMessage(fd, C_DISC);
+}
+
+void sendRR(int fd){
+    char RR[5];
+    int resRR, i;
+    printf("--- Sending RR ---\n");
+    RR[0] = FLAG_RCV;    //   F   
+    RR[1] = A_RCV;       //   A   
+    if (switchRR == 0)   //   C   
+        RR[2] = C_RR_1;       
+    else
+        RR[2] = C_RR_0;
+    RR[3] = RR[2]^A_RCV; // BCCOK 
+    RR[4] = FLAG_RCV;    //   F   
+    resRR = write(fd,RR,5);
+
+    switchRR = !switchRR;
+    printf("\n%d bytes written\n", resRR);
+}
+
+void readRR(int fd){
+    int res, SMFlag = 0;
+    char C_RCV, buf[255];
+    printf("--- Reading RR ---\n");
+    
     if(switchreadRR == 0)
         C_RCV = C_RR_1;
     else
         C_RCV = C_RR_0;
-    
-    processMessage(fd, C_RCV);
-    switchreadRR = !switchreadRR;
-}
 
-void readDISC(int fd) {
-    printf("--- Reading DISC ---\n");
-    processMessage(fd, C_DISC);
+    while (STOP == FALSE) {       // loop for input 
+        res = read(fd,buf,1);     // returns after 1 char has been input       
+        switch(frameState){
+
+            case stateStart:
+                if (buf[0] == FLAG_RCV)
+                    frameState = stateFlagRCV;
+                break;
+
+            case stateFlagRCV:
+                if (buf[0] == FLAG_RCV){
+                    frameState = stateFlagRCV;
+                    SMFlag = 0;
+                }
+                else if (buf[0] == A_RCV || buf[0] == ALT_A_RCV)
+                    frameState = stateARCV;
+                
+                else{
+                    frameState = stateStart;          
+                    SMFlag = 0;
+                }
+                break;
+
+            case stateARCV:
+                if (buf[0] == FLAG_RCV)
+                    frameState = stateFlagRCV;
+                
+                else if (buf[0] == C_RCV)
+                    frameState = stateCRCV;
+                
+                else{
+                    frameState = stateStart; 
+                    SMFlag = 0;
+                }
+                break;  
+
+            case stateCRCV:
+                if (buf[0] == FLAG_RCV){
+                    frameState = stateFlagRCV;
+                    SMFlag = 0;
+                }
+                else if (buf[0] == A_RCV^C_RCV || buf[0] == ALT_A_RCV^C_RCV){
+                    frameState = stateBCCOK;
+                    STOP = TRUE;
+                }
+                else{
+                    frameState = stateStart;
+                    SMFlag = 0;
+                }
+                break;
+            
+            case stateBCCOK:
+                frameState = stateStart;
+                break;
+        } 
+        
+        if (buf[0] == FLAG_RCV && SMFlag == 1)
+            STOP = TRUE;
+        
+        if(buf[0] == FLAG_RCV)
+            SMFlag = 1;
+        //printf("%s:%d\n", buf, res);  
+    } 
+    STOP = FALSE;
+    switchreadRR = !switchreadRR;
 }
 
 void sendTux() {
