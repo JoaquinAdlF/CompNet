@@ -97,7 +97,7 @@ void sendUA(int fd) {
 void sendRR(int fd) {
     printf("---- Sending RR ----\n");
     char C_RCV;
-    if(switchreadRR == 0)
+    if(switchRR == 0)
         C_RCV = C_RR_1;
     else
         C_RCV = C_RR_0;
