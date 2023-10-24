@@ -10,14 +10,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <stdbool.h>
 
 // MISC
 #define _POSIX_SOURCE 1 // POSIX compliant source
 #define FALSE 0
 #define TRUE 1
-#define FRAME_MAX_SIZE 1050
-#define DATA_START_POS 4
 
 #define FLAG_RCV 0x5E
 #define A_RCV 0x03
@@ -371,97 +368,150 @@ int llwrite(const unsigned char *buf, int bufSize) {
     alarm(0);
     alarmCounter = 0;
     printf("--- RR Checked ---\n");
-    return resData;
+    return resendSize;
 }
 
 ////////////////////////////////////////////////
 // LLREAD
 ////////////////////////////////////////////////
 // Receives data in packet
-
 int llread(unsigned char *packet) {
-    char buffer[FRAME_MAX_SIZE];
-    int bytesRead = 0;
-    char C_RCV = switchread_C_RCV ? C_NS_1 : C_NS_0;
-    char BCC2;
-    bool frameStarted = false;
+    int x = 0, res, xor, bytes_read, SMFlag = 0, destuffFlag = 0, skip = 0;
+    char aux, C_RCV, buf[1], str[1050];
+    frameState = stateStart;
 
-    while (1) {
-        // Read a byte from the serial port
-        int res = read(fd, buffer + bytesRead, 1);
-        if (res <= 0) {
+    if (switchread_C_RCV == 0)
+        C_RCV = C_NS_0;
+    else
+        C_RCV = C_NS_1;
+    
+    while (STOP == FALSE) {         // Loop for input
+        res = read (fd, buf, 1);    // Returns after 5 chars have been input
+
+        if (res == -1) {
             perror("Error reading from descriptor");
-            return -1;
+            return -1; // exit the function in case of an error
         }
 
-        // Check for start of frame
-        if (buffer[bytesRead] == FLAG_RCV) {
-            if (!frameStarted) {
-                frameStarted = true;
-                bytesRead = 0; // Reset byte counter for new frame
-                continue;      // Go to next iteration without incrementing bytesRead
-            } else {
-                // End of frame detected
+        switch(frameState) {
+            case stateStart:
+                if (buf[0] == FLAG_RCV)
+                    frameState = stateFlagRCV;
                 break;
-            }
+            
+            case stateFlagRCV:
+                if (buf[0] == FLAG_RCV){
+                    frameState = stateFlagRCV;
+                    SMFlag = 0;
+                }
+                else if (buf[0] == A_RCV || buf[0] == ALT_A_RCV)
+                    frameState = stateARCV;
+                
+                else{
+                    frameState = stateStart; 
+                    SMFlag = 0;
+                }
+                break;
+
+            case stateARCV:
+                if (buf[0] == FLAG_RCV)
+                    frameState = stateFlagRCV;
+                
+                else if (buf[0] == C_RCV)
+                    frameState = stateCRCV;
+                
+                else{
+                    frameState = stateStart; 
+                    SMFlag = 0;
+                }
+                break;  
+
+            case stateCRCV:
+                if (buf[0] == FLAG_RCV){
+                    frameState = stateFlagRCV;
+                    SMFlag = 0;
+                }
+                else if (buf[0] == (A_RCV^C_RCV) || buf[0] == (ALT_A_RCV^C_RCV))
+                    frameState = stateBCCOK;
+                                
+                else{
+                    frameState = stateStart;
+                    SMFlag = 0;
+                }
+                break;
+            
+            case stateBCCOK:
+                frameState = stateStart;
+                break;
         }
 
-        // If frame has started, increment bytesRead
-        if (frameStarted) {
-            bytesRead++;
+        // Byte destuffing
+        if (buf[0] == 0x5d)
+            destuffFlag = 1;
+        
+        if (destuffFlag && buf[0] == 0x7c) {
+            str[x-1] = 0x5c;
+            skip = 1;
+        }
+        else if (destuffFlag && buf[0] == 0x7d) {
+            skip = 1;
         }
 
-        // Protect against buffer overflow
-        if (bytesRead >= FRAME_MAX_SIZE) {
+        // If the program encounters an escape byte it will alter the first char and skip
+
+        if (!skip) {
+            str[x] = buf[0];
+            if (x > 0)
+                aux = str[x-1];
+            x++;
+        }
+        else {
+            skip = 0;
+            destuffFlag = 0;
+        }
+
+        if (x >= sizeof(str) - 1) {
             fprintf(stderr, "Buffer overflow detected in llread.\n");
             return -1;
         }
-    }
 
-    // Validate the received frame
-    if (bytesRead < 5 || buffer[1] != A_RCV || buffer[2] != C_RCV || buffer[3] != (A_RCV ^ C_RCV)) {
-        fprintf(stderr, "Invalid frame format in llread.\n");
-        return -1;
-    }
+        // After destuffing the data it calculates bcc2
 
-    // Compute BCC2 over the data section
-    BCC2 = buffer[DATA_START_POS];
-    for (int i = DATA_START_POS + 1; i < bytesRead - 1; i++) {
-        BCC2 ^= buffer[i];
-    }
+        // Checks if the current flag is the final one and if bcc2 is ok
+        if (buf[0] == FLAG_RCV && SMFlag && x > 0) {
+            xor = str[4];
 
-    if (BCC2 != buffer[bytesRead - 1]) {
-        fprintf(stderr, "BCC2 validation failed in llread.\n");
-        return -1;
-    }
-
-    // Byte destuffing
-    int destuffedSize = 0;
-    for (int i = DATA_START_POS; i < bytesRead - 1; i++) {
-        if (buffer[i] == 0x5d) {
-            if (i + 1 < bytesRead - 1) {
-                if (buffer[i + 1] == 0x7d) {
-                    packet[destuffedSize++] = 0x5d;
-                } else if (buffer[i + 1] == 0x7c) {
-                    packet[destuffedSize++] = 0x5c;
-                }
-                i++; // skip next byte
-            } else {
-                fprintf(stderr, "Invalid destuffing sequence detected.\n");
+            for (int i = 5; i < x-2; i++)
+                xor = xor^str[i];
+            if (aux == xor) {
+                STOP = TRUE;
+                printf("---- Frame Read OK ----");
+            }
+            else {      // Error in XOR value
+                printf("XOR value is: 0x%02x\n Should be: 0x%02x\n", (unsigned int)(xor & 0xff), (unsigned int)(aux & 0xff));
+                printf("\n---- BCC2 failed! ----\n");
                 return -1;
             }
-        } else {
-            packet[destuffedSize++] = buffer[i];
         }
+
+        if (buf[0] == FLAG_RCV)
+            SMFlag = 1;
+
     }
 
-    switchread_C_RCV = !switchread_C_RCV;  // Toggle the state
+    STOP = FALSE;
+    switchread_C_RCV = !switchread_C_RCV;
+
+    for (int i = 4; i < x-2; i++)
+        packet[i-4] = str[i];
+
+    printf("\n\n --- DESTUFFED DATA ---\n\n");
+    bytes_read = x-6;
 
     sendRR(fd);
 
-    return destuffedSize;
+    return bytes_read;
 }
-
 
 ////////////////////////////////////////////////
 // LLCLOSE
