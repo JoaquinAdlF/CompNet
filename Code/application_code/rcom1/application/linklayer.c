@@ -425,54 +425,6 @@ void readDISC(int fd){
     STOP = FALSE;
 }
 
-void sendTux(){
-        printf("\nWork by: Carina Silva and Goncalo Cardoso, 3LEEC08, FEUP, RCOM 2022/23\n\n");
-        printf("                                .:xxxxxxxx:.\n");
-        printf("                             .xxxxxxxxxxxxxxxx.\n");
-        printf("                            :xxxxxxxxxxxxxxxxxxx:.\n");
-        printf("                           .xxxxxxxxxxxxxxxxxxxxxxx:\n");
-        printf("                          :xxxxxxxxxxxxxxxxxxxxxxxxx:\n");
-        printf("                          xxxxxxxxxxxxxxxxxxxxxxxxxX:\n");
-        printf("                          xxx:::xxxxxxxx::::xxxxxxxxx:\n");
-        printf("                         .xx:   ::xxxxx:     :xxxxxxxx\n");
-        printf("                         :xx  x.  xxxx:  xx.  xxxxxxxx\n");
-        printf("                         :xx xxx  xxxx: xxxx  :xxxxxxx\n");
-        printf("                         'xx 'xx  xxxx:. xx'  xxxxxxxx\n");
-        printf("                          xx ::::::xx:::::.   xxxxxxxx\n");
-        printf("                          xx:::::.::::.:::::::xxxxxxxx\n");
-        printf("                          :x'::::'::::':::::':xxxxxxxxx.\n");
-        printf("                          :xx.::::::::::::'   xxxxxxxxxx\n");
-        printf("                          :xx: '::::::::'     :xxxxxxxxxx.\n");
-        printf("                         .xx     '::::'        'xxxxxxxxxx.\n");
-        printf("                       .xxxx                     'xxxxxxxxx.\n");
-        printf("                     .xxxxx:                          xxxxxxxxxx.\n");
-        printf("                  .xxxxx:'                          xxxxxxxxxxx.\n");
-        printf("                 .xxxxxx:::.           .       ..:::_xxxxxxxxxxx:.\n");
-        printf("                .xxxxxxx''      ':::''            ''::xxxxxxxxxxxx.\n");
-        printf("                xxxxxx            :                  '::xxxxxxxxxxxx\n");
-        printf("               :xxxx:'            :                    'xxxxxxxxxxxx:\n");
-        printf("              .xxxxx              :                     ::xxxxxxxxxxxx\n");
-        printf("              xxxx:'                                    ::xxxxxxxxxxxx\n");
-        printf("              xxxx               .                      ::xxxxxxxxxxxx.\n");
-        printf("          .:xxxxxx               :                      ::xxxxxxxxxxxx::\n");
-        printf("          xxxxxxxx               :                      ::xxxxxxxxxxxxx:\n");
-        printf("          xxxxxxxx               :                      ::xxxxxxxxxxxxx:\n");
-        printf("          ':xxxxxx               '                      ::xxxxxxxxxxxx:'\n");
-        printf("            .:. xx:.                                   .:xxxxxxxxxxxxx'\n");
-        printf("          ::::::.'xx:.            :                  .:: xxxxxxxxxxx':\n");
-        printf("  .:::::::::::::::.'xxxx.                            ::::'xxxxxxxx':::.\n");
-        printf("  ::::::::::::::::::.'xxxxx                          :::::.'.xx.'::::::.\n");
-        printf("  ::::::::::::::::::::.'xxxx:.                       :::::::.'':::::::::\n");
-        printf("  ':::::::::::::::::::::.'xx:'                     .'::::::::::::::::::::..\n");
-        printf("    :::::::::::::::::::::.'xx                    .:: :::::::::::::::::::::::\n");
-        printf("  .:::::::::::::::::::::::. xx               .::xxxx :::::::::::::::::::::::\n");
-        printf("  :::::::::::::::::::::::::.'xxx..        .::xxxxxxx ::::::::::::::::::::'\n");
-        printf("  '::::::::::::::::::::::::: xxxxxxxxxxxxxxxxxxxxxxx :::::::::::::::::'\n");
-        printf("    '::::::::::::::::::::::: xxxxxxxxxxxxxxxxxxxxxxx :::::::::::::::'\n");
-        printf("        ':::::::::::::::::::_xxxxxx::'''::xxxxxxxxxx '::::::::::::'\n");
-        printf("             '':.::::::::::'                        `._'::::::''\n");
-}
-
 /* Opens a connection using the "port" parameters defined in struct linkLayer, returns "-1" on error and "1" on sucess */
 int llopen(linkLayer connectionParameters){
     int i = 0;
@@ -785,7 +737,6 @@ int llclose(linkLayer connectionParameters, int showStatistics){
         }
         
         close(fd);
-        sendTux();
         return 0;
     }
 
@@ -813,7 +764,6 @@ int llclose(linkLayer connectionParameters, int showStatistics){
         }
         
         close(fd);
-        sendTux();
         return 0;
     }
 
