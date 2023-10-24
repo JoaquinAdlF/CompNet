@@ -17,6 +17,7 @@
 #define FALSE 0
 #define TRUE 1
 #define FRAME_MAX_SIZE 1050
+#define DATA_START_POS 4
 
 #define FLAG_RCV 0x5E
 #define A_RCV 0x03
@@ -377,129 +378,90 @@ int llwrite(const unsigned char *buf, int bufSize) {
 // LLREAD
 ////////////////////////////////////////////////
 // Receives data in packet
-int llread(unsigned char *packet) {
-    int x = 0, res;
-    char buf[1], str[FRAME_MAX_SIZE];
-    frameState = stateStart;
-    char C_RCV = switchread_C_RCV ? C_NS_1 : C_NS_0;
-    
-    bool destuffFlag = FALSE, SMFlag = FALSE, skip = FALSE;
 
-    while (STOP == FALSE) {
-        res = read(fd, buf, 1);
-        if (res == -1) {
+int llread(unsigned char *packet) {
+    char buffer[FRAME_MAX_SIZE];
+    int bytesRead = 0;
+    char C_RCV = switchread_C_RCV ? C_NS_1 : C_NS_0;
+    char BCC2;
+    bool frameStarted = false;
+
+    while (1) {
+        // Read a byte from the serial port
+        int res = read(fd, buffer + bytesRead, 1);
+        if (res <= 0) {
             perror("Error reading from descriptor");
             return -1;
         }
 
-        // Frame synchronization logic
-        switch(frameState) {
-            case stateStart:
-                if (buf[0] == FLAG_RCV) {
-                    frameState = stateFlagRCV;
-                }
+        // Check for start of frame
+        if (buffer[bytesRead] == FLAG_RCV) {
+            if (!frameStarted) {
+                frameStarted = true;
+                bytesRead = 0; // Reset byte counter for new frame
+                continue;      // Go to next iteration without incrementing bytesRead
+            } else {
+                // End of frame detected
                 break;
-
-            case stateFlagRCV:
-                if (buf[0] == FLAG_RCV) {
-                    frameState = stateFlagRCV;
-                    SMFlag = false;
-                } else if (buf[0] == A_RCV || buf[0] == ALT_A_RCV) {
-                    frameState = stateARCV;
-                } else {
-                    frameState = stateStart;
-                    SMFlag = false;
-                }
-                break;
-
-            case stateARCV:
-                if (buf[0] == FLAG_RCV) {
-                    frameState = stateFlagRCV;
-                } else if (buf[0] == C_RCV) {
-                    frameState = stateCRCV;
-                } else {
-                    frameState = stateStart;
-                    SMFlag = false;
-                }
-                break;
-
-            case stateCRCV:
-                if (buf[0] == FLAG_RCV) {
-                    frameState = stateFlagRCV;
-                    SMFlag = false;
-                } else if (buf[0] == (A_RCV^C_RCV) || buf[0] == (ALT_A_RCV^C_RCV)) {
-                    frameState = stateBCCOK;
-                } else {
-                    frameState = stateStart;
-                    SMFlag = false;
-                }
-                break;
-
-            case stateBCCOK:
-                frameState = stateStart;
-                break;
-        }
-
-        // Byte destuffing logic
-        if (buf[0] == 0x5d) {
-            destuffFlag = TRUE;
-        } else if (destuffFlag) {
-            if (buf[0] == 0x7c) {
-                str[x-1] = 0x5c;
-                skip = TRUE;
-            } else if (buf[0] == 0x7d) {
-                skip = TRUE;
             }
-            destuffFlag = FALSE;
         }
 
-        // Filling the buffer after destuffing
-        if (!skip) {
-            str[x++] = buf[0];
-        } else {
-            skip = FALSE;
+        // If frame has started, increment bytesRead
+        if (frameStarted) {
+            bytesRead++;
         }
 
-        // Buffer overflow check
-        if (x >= FRAME_MAX_SIZE - 1) {
+        // Protect against buffer overflow
+        if (bytesRead >= FRAME_MAX_SIZE) {
             fprintf(stderr, "Buffer overflow detected in llread.\n");
             return -1;
         }
+    }
 
-        // Checking XOR integrity after destuffing
-        if (buf[0] == FLAG_RCV && SMFlag && x > 0) {
-            char xorValue = str[4];
-            for (int i = 5; i < x-2; i++) {
-                xorValue ^= str[i];
-            }
+    // Validate the received frame
+    if (bytesRead < 5 || buffer[1] != A_RCV || buffer[2] != C_RCV || buffer[3] != (A_RCV ^ C_RCV)) {
+        fprintf(stderr, "Invalid frame format in llread.\n");
+        return -1;
+    }
 
-            if (str[x-2] == xorValue) {
-                STOP = TRUE;
-                printf("---- Frame Read OK ----");
+    // Compute BCC2 over the data section
+    BCC2 = buffer[DATA_START_POS];
+    for (int i = DATA_START_POS + 1; i < bytesRead - 1; i++) {
+        BCC2 ^= buffer[i];
+    }
+
+    if (BCC2 != buffer[bytesRead - 1]) {
+        fprintf(stderr, "BCC2 validation failed in llread.\n");
+        return -1;
+    }
+
+    // Byte destuffing
+    int destuffedSize = 0;
+    for (int i = DATA_START_POS; i < bytesRead - 1; i++) {
+        if (buffer[i] == 0x5d) {
+            if (i + 1 < bytesRead - 1) {
+                if (buffer[i + 1] == 0x7d) {
+                    packet[destuffedSize++] = 0x5d;
+                } else if (buffer[i + 1] == 0x7c) {
+                    packet[destuffedSize++] = 0x5c;
+                }
+                i++; // skip next byte
             } else {
-                printf("XOR mismatch. Expected: 0x%02x, Received: 0x%02x\n", xorValue, str[x-2]);
+                fprintf(stderr, "Invalid destuffing sequence detected.\n");
                 return -1;
             }
-        }
-
-        // Set the SMFlag if current flag matches
-        if (buf[0] == FLAG_RCV) {
-            SMFlag = TRUE;
+        } else {
+            packet[destuffedSize++] = buffer[i];
         }
     }
 
-    // Toggle the read control value for next frame
-    switchread_C_RCV = !switchread_C_RCV;
-
-    // Copy the destuffed data to the packet
-    memcpy(packet, &str[4], x-6);
-
-    printf("\n\n --- DESTUFFED DATA ---\n\n");
+    switchread_C_RCV = !switchread_C_RCV;  // Toggle the state
 
     sendRR(fd);
 
-    return x-6;
+    return destuffedSize;
 }
+
 
 ////////////////////////////////////////////////
 // LLCLOSE
