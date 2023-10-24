@@ -10,11 +10,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 
 // MISC
 #define _POSIX_SOURCE 1 // POSIX compliant source
 #define FALSE 0
 #define TRUE 1
+#define FRAME_MAX_SIZE 1050
 
 #define FLAG_RCV 0x5E
 #define A_RCV 0x03
@@ -376,141 +378,127 @@ int llwrite(const unsigned char *buf, int bufSize) {
 ////////////////////////////////////////////////
 // Receives data in packet
 int llread(unsigned char *packet) {
-    int x = 0, res, xor, bytes_read, SMFlag = 0, destuffFlag = 0, skip = 0;
-    char aux, C_RCV, buf[1], str[1050];
+    int x = 0, res;
+    char buf[1], str[FRAME_MAX_SIZE];
     frameState = stateStart;
-
-    if (switchread_C_RCV == 0)
-        C_RCV = C_NS_0;
-    else
-        C_RCV = C_NS_1;
+    char C_RCV = switchread_C_RCV ? C_NS_1 : C_NS_0;
     
-    while (STOP == FALSE) {         // Loop for input
-        res = read (fd, buf, 1);    // Returns after 5 chars have been input
+    bool destuffFlag = FALSE, SMFlag = FALSE, skip = FALSE;
 
+    while (STOP == FALSE) {
+        res = read(fd, buf, 1);
         if (res == -1) {
             perror("Error reading from descriptor");
-            return -1; // exit the function in case of an error
+            return -1;
         }
 
+        // Frame synchronization logic
         switch(frameState) {
             case stateStart:
-                if (buf[0] == FLAG_RCV)
+                if (buf[0] == FLAG_RCV) {
                     frameState = stateFlagRCV;
-                break;
-            
-            case stateFlagRCV:
-                if (buf[0] == FLAG_RCV){
-                    frameState = stateFlagRCV;
-                    SMFlag = 0;
                 }
-                else if (buf[0] == A_RCV || buf[0] == ALT_A_RCV)
+                break;
+
+            case stateFlagRCV:
+                if (buf[0] == FLAG_RCV) {
+                    frameState = stateFlagRCV;
+                    SMFlag = false;
+                } else if (buf[0] == A_RCV || buf[0] == ALT_A_RCV) {
                     frameState = stateARCV;
-                
-                else{
-                    frameState = stateStart; 
-                    SMFlag = 0;
+                } else {
+                    frameState = stateStart;
+                    SMFlag = false;
                 }
                 break;
 
             case stateARCV:
-                if (buf[0] == FLAG_RCV)
+                if (buf[0] == FLAG_RCV) {
                     frameState = stateFlagRCV;
-                
-                else if (buf[0] == C_RCV)
+                } else if (buf[0] == C_RCV) {
                     frameState = stateCRCV;
-                
-                else{
-                    frameState = stateStart; 
-                    SMFlag = 0;
-                }
-                break;  
-
-            case stateCRCV:
-                if (buf[0] == FLAG_RCV){
-                    frameState = stateFlagRCV;
-                    SMFlag = 0;
-                }
-                else if (buf[0] == (A_RCV^C_RCV) || buf[0] == (ALT_A_RCV^C_RCV))
-                    frameState = stateBCCOK;
-                                
-                else{
+                } else {
                     frameState = stateStart;
-                    SMFlag = 0;
+                    SMFlag = false;
                 }
                 break;
-            
+
+            case stateCRCV:
+                if (buf[0] == FLAG_RCV) {
+                    frameState = stateFlagRCV;
+                    SMFlag = false;
+                } else if (buf[0] == (A_RCV^C_RCV) || buf[0] == (ALT_A_RCV^C_RCV)) {
+                    frameState = stateBCCOK;
+                } else {
+                    frameState = stateStart;
+                    SMFlag = false;
+                }
+                break;
+
             case stateBCCOK:
                 frameState = stateStart;
                 break;
         }
 
-        // Byte destuffing
-        if (buf[0] == 0x5d)
-            destuffFlag = 1;
-        
-        if (destuffFlag && buf[0] == 0x7c) {
-            str[x-1] = 0x5c;
-            skip = 1;
-        }
-        else if (destuffFlag && buf[0] == 0x7d) {
-            skip = 1;
+        // Byte destuffing logic
+        if (buf[0] == 0x5d) {
+            destuffFlag = TRUE;
+        } else if (destuffFlag) {
+            if (buf[0] == 0x7c) {
+                str[x-1] = 0x5c;
+                skip = TRUE;
+            } else if (buf[0] == 0x7d) {
+                skip = TRUE;
+            }
+            destuffFlag = FALSE;
         }
 
-        // If the program encounters an escape byte it will alter the first char and skip
-
+        // Filling the buffer after destuffing
         if (!skip) {
-            str[x] = buf[0];
-            if (x > 0)
-                aux = str[x-1];
-            x++;
-        }
-        else {
-            skip = 0;
-            destuffFlag = 0;
+            str[x++] = buf[0];
+        } else {
+            skip = FALSE;
         }
 
-        if (x >= sizeof(str) - 1) {
+        // Buffer overflow check
+        if (x >= FRAME_MAX_SIZE - 1) {
             fprintf(stderr, "Buffer overflow detected in llread.\n");
             return -1;
         }
 
-        // After destuffing the data it calculates bcc2
-
-        // Checks if the current flag is the final one and if bcc2 is ok
+        // Checking XOR integrity after destuffing
         if (buf[0] == FLAG_RCV && SMFlag && x > 0) {
-            xor = str[4];
+            char xorValue = str[4];
+            for (int i = 5; i < x-2; i++) {
+                xorValue ^= str[i];
+            }
 
-            for (int i = 5; i < x-2; i++)
-                xor = xor^str[i];
-            if (aux == xor) {
+            if (str[x-2] == xorValue) {
                 STOP = TRUE;
                 printf("---- Frame Read OK ----");
-            }
-            else {      // Error in XOR value
-                printf("XOR value is: 0x%02x\n Should be: 0x%02x\n", (unsigned int)(xor & 0xff), (unsigned int)(aux & 0xff));
-                printf("\n---- BCC2 failed! ----\n");
+            } else {
+                printf("XOR mismatch. Expected: 0x%02x, Received: 0x%02x\n", xorValue, str[x-2]);
                 return -1;
             }
         }
 
-        if (buf[0] == FLAG_RCV)
-            SMFlag = 1;
-
+        // Set the SMFlag if current flag matches
+        if (buf[0] == FLAG_RCV) {
+            SMFlag = TRUE;
+        }
     }
 
-    STOP = FALSE;
+    // Toggle the read control value for next frame
     switchread_C_RCV = !switchread_C_RCV;
 
-    for (int i = 4; i < x-2; i++)
-        packet[i-4] = str[i];
+    // Copy the destuffed data to the packet
+    memcpy(packet, &str[4], x-6);
 
     printf("\n\n --- DESTUFFED DATA ---\n\n");
-    bytes_read = x-6;
 
     sendRR(fd);
 
-    return bytes_read;
+    return x-6;
 }
 
 ////////////////////////////////////////////////
