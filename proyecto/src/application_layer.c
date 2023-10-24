@@ -61,7 +61,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             }
 
             // Continue with the transfer
-            if (bytes_read > 0) {
+            else if (bytes_read > 0) {
                 buffer[0] = 1;
                 write_result = llwrite(buffer, bytes_read+1);
                 // If the resutl is lower than 0 there was an error and the process is halted

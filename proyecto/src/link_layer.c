@@ -296,9 +296,7 @@ int llwrite(const unsigned char *buf, int bufSize) {
         return -1; // Invalid buffer or size
     
     int resData, auxSize = 0;
-    for(int i = 0; i < bufSize; i++){
-        printf("var = 0x%02x\n",(unsigned int)(buf[0] & 0xff));
-    }
+
     char xor = buf[0], auxBuf[2000];
     for(int i = 1; i < bufSize; i++)
         xor = xor^buf[i];
@@ -470,6 +468,11 @@ int llread(unsigned char *packet) {
         else {
             skip = 0;
             destuffFlag = 0;
+        }
+
+        if (x >= sizeof(str) - 1) {
+            fprintf(stderr, "Buffer overflow detected in llread.\n");
+            return -1;
         }
 
         // After destuffing the data it calculates bcc2
