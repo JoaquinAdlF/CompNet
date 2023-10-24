@@ -23,10 +23,10 @@
 #define C_UA 0x07
 #define C_NS_0 0x00
 #define C_NS_1 0x02
-#define C_RR_0 0x01
-#define C_RR_1 0x21
-#define C_REJ_0 0x05
-#define C_REJ_1 0x25
+#define C_RR_0 0x05
+#define C_RR_1 0x85
+#define C_REJ_0 0x01
+#define C_REJ_1 0x81
 #define C_DISC 0x0B
 
 volatile int STOP = FALSE;
@@ -223,7 +223,7 @@ int llopen(LinkLayer connectionParameters) {
         perror(connectionParameters.serialPort);
         exit(1);
     }
-    if (tcgetattr(fd,&oldtio) == -1) { /* save current port settings */
+    if (tcgetattr(fd,&oldtio) == -1) { // Save current port settings
         perror("tcgetattr");
         exit(-1);
     }
@@ -237,6 +237,8 @@ int llopen(LinkLayer connectionParameters) {
     newtio.c_lflag = 0;
     newtio.c_cc[VTIME] = 0.1; // Inter-character timer unused
     newtio.c_cc[VMIN] = 1;
+
+    // VIME and VIM must be modified so that the alarm works when reading characters
 
     tcflush(fd, TCIOFLUSH);     // Flushes data received but not read
 
