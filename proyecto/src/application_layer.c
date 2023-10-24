@@ -51,6 +51,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         int bytes_read = 1;
         
         while (bytes_read > 0) {
+            memset(buffer, 0, sizeof(buffer));
             bytes_read = read(file_desc, buffer+1, buf_size);
 
             // Error from link layer
