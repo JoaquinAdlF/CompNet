@@ -312,7 +312,7 @@ int llwrite(const unsigned char *buf, int bufSize) {
 
     for(int i = 0; i < auxSize; i++){
         if(auxBuf[i] == 0x5d){ // If (0x5d) occurs, it is replaced by the sequence 0x5d 0x7d
-            for(j = auxSize+1; j > i+1; j--)
+            for(int j = auxSize+1; j > i+1; j--)
                 auxBuf[j] = auxBuf[j-1];
             auxBuf[i+1] = 0x7d;
             auxSize++;
@@ -322,7 +322,7 @@ int llwrite(const unsigned char *buf, int bufSize) {
     for(int i = 1; i < auxSize; i++){
         if(auxBuf[i] == 0x5c){ // If (0x5c) occurs, it is replaced by the sequence 0x5d 0x7c
             auxBuf[i] = 0x5d;
-            for(j = auxSize+1; j > i+1; j--)            
+            for(int j = auxSize+1; j > i+1; j--)            
                 auxBuf[j] = auxBuf[j-1];
             auxBuf[i+1] = 0x7c;
             auxSize++;
