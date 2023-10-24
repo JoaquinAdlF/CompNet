@@ -16,7 +16,7 @@
 #define FALSE 0
 #define TRUE 1
 
-#define FLAG_RCV 0x5c
+#define FLAG_RCV 0x5E
 #define A_RCV 0x03
 #define ALT_A_RCV 0x01
 #define C_SET 0x03
@@ -318,7 +318,7 @@ int llwrite(const unsigned char *buf, int bufSize) {
     }
 
     for(int i = 1; i < auxSize; i++){
-        if(auxBuf[i] == 0x5c){ // If (0x5c) occurs, it is replaced by the sequence 0x5d 0x7c
+        if(auxBuf[i] == FLAG_RCV){ // If (FLAG_RCV) occurs, it is replaced by the sequence 0x5d 0x7c
             auxBuf[i] = 0x5d;
             for(int j = auxSize+1; j > i+1; j--)            
                 auxBuf[j] = auxBuf[j-1];
@@ -341,7 +341,7 @@ int llwrite(const unsigned char *buf, int bufSize) {
     for(int i = 0; i < auxSize; i++)
         str[i+4] = auxBuf[i];
     
-    if(xor == 0x5c){
+    if(xor == FLAG_RCV){
         auxSize++;
         str[auxSize+4] = 0x5d;
         str[auxSize+5] = 0x7c;
@@ -450,7 +450,7 @@ int llread(unsigned char *packet) {
             destuffFlag = 1;
         
         if (destuffFlag && buf[0] == 0x7c) {
-            str[x-1] = 0x5c;
+            str[x-1] = FLAG_RCV;
             skip = 1;
         }
         else if (destuffFlag && buf[0] == 0x7d) {
