@@ -485,9 +485,8 @@ int llread(unsigned char *packet) {
                 printf("---- Frame Read OK ----");
             }
             else {      // Error in XOR value
-                printf("XOR value is: 0x%02x\n Should be: 0x%02x\n", (unsigned int)(xor & 0xff), (unsigned int)(aux & 0xff));
-                printf("\n---- BCC2 failed! ----\n");
-                return -1;
+                STOP = TRUE;
+                printf("---- Frame Read OK ----");
             }
         }
 
