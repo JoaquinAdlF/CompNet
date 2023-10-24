@@ -185,7 +185,7 @@ void readDISC(int fd) {
 
 void sendRR(int fd){
     char RR[5];
-    int resRR, i;
+    int resRR;
     printf("--- Sending RR ---\n");
     RR[0] = FLAG_RCV;    //   F   
     RR[1] = A_RCV;       //   A   
@@ -212,7 +212,13 @@ void readRR(int fd){
         C_RCV = C_RR_0;
 
     while (STOP == FALSE) {       // loop for input 
-        res = read(fd,buf,1);     // returns after 1 char has been input       
+        res = read(fd,buf,1);     // returns after 1 char has been input
+
+        if (res == -1) {
+            perror("Error reading from descriptor");
+            return; // exit the function in case of an error
+        }
+
         switch(frameState){
 
             case stateStart:
@@ -252,7 +258,7 @@ void readRR(int fd){
                     frameState = stateFlagRCV;
                     SMFlag = 0;
                 }
-                else if (buf[0] == A_RCV^C_RCV || buf[0] == ALT_A_RCV^C_RCV){
+                else if (buf[0] == (A_RCV^C_RCV) || buf[0] == (ALT_A_RCV^C_RCV)){
                     frameState = stateBCCOK;
                     STOP = TRUE;
                 }
