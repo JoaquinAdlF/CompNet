@@ -368,7 +368,7 @@ int llwrite(const unsigned char *buf, int bufSize) {
     alarm(0);
     alarmCounter = 0;
     printf("--- RR Checked ---\n");
-    return 1;
+    return resData;
 }
 
 ////////////////////////////////////////////////
