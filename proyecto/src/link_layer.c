@@ -16,7 +16,7 @@
 #define FALSE 0
 #define TRUE 1
 
-#define FLAG_RCV 0x5E
+#define FLAG_RCV 0x5c
 #define A_RCV 0x03
 #define ALT_A_RCV 0x01
 #define C_SET 0x03
