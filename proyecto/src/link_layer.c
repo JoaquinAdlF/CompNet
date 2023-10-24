@@ -294,37 +294,34 @@ int llwrite(const unsigned char *buf, int bufSize) {
     if (buf == NULL || bufSize <= 0 || bufSize > 2000)
         return -1; // Invalid buffer or size
     
-    int resData, auxSize = 0;
-
-    for (int i = 0; i < bufSize; i++) {
-        printf("var = 0x%02x\n",(unsigned int)(buf[i] & 0xff));
+    int i, j, resData, auxSize = 0;
+    for(i = 0; i < bufSize; i++){
+        printf("var = 0x%02x\n",(unsigned int)(buf[0] & 0xff));
     }
-
     char xor = buf[0], auxBuf[2000];
-    for (int i = 1; i < bufSize; i++)
+    for(i = 1; i < bufSize; i++)
         xor = xor^buf[i];
 
-    // Byte stuffing
-    for (int i = 0; i < bufSize; i++) {
+    /* byte stuffing */
+    for(i = 0; i < bufSize; i++){
         auxBuf[i] = buf[i];
     }
-
+    
     auxSize = bufSize;
 
-    for (int i = 0; i < auxSize; i++) {
-        // If 0x5d occurs it is replaced by 0x5d 0x7d
-        if (auxBuf[i] == 0x5d) {
-            for (int j = auxSize+1; j > i+1; j--)
-                auxBuf[i] = auxBuf[j-1];
+    for(i = 0; i < auxSize; i++){
+        if(auxBuf[i] == 0x5d){ /*if (0x5d) occurs, it is replaced by the sequence 0x5d 0x7d */
+            for(j = auxSize+1; j > i+1; j--)
+                auxBuf[j] = auxBuf[j-1];
             auxBuf[i+1] = 0x7d;
             auxSize++;
         }
     }
 
-    for (int i = 1; i < auxSize; i++) {
-        // If 0x5c occurs it is replaced by 0x5d 0x7c
-        if (auxBuf[i] == 0x5c) {
-            for (int j = auxSize+1; j > i+1; j--)
+    for(i = 1; i < auxSize; i++){
+        if(auxBuf[i] == 0x5c){ /*if (0x5c) occurs, it is replaced by the sequence 0x5d 0x7c */
+            auxBuf[i] = 0x5d;
+            for(j = auxSize+1; j > i+1; j--)            
                 auxBuf[j] = auxBuf[j-1];
             auxBuf[i+1] = 0x7c;
             auxSize++;
@@ -333,43 +330,40 @@ int llwrite(const unsigned char *buf, int bufSize) {
 
     char str[auxSize+6];
 
-    str[0] = FLAG_RCV;              // F
-    str[1] = A_RCV;                 // A
-    if (switchwrite_C_RCV == 0)     // C
-        str[2] = C_NS_0;
+    str[0] = FLAG_RCV;          /*   F   */
+    str[1] = A_RCV;             /*   A   */
+    if (switchwrite_C_RCV == 0) /*   C   */
+        str[2] = C_NS_0;       
     else
         str[2] = C_NS_1;
     switchwrite_C_RCV = !switchwrite_C_RCV;
-    str[3] = str[2]^A_RCV;          // BCCOK
+    str[3] = str[2]^A_RCV;      /* BCCOK */
 
-    for (int i = 0; i < auxSize; i++)
-        str[i+4] = auxBuf[i];
-
-    if (xor == 0x5c) {
+    for(j = 0; j < auxSize; j++)
+        str[j+4] = auxBuf[j];
+    
+    if(xor == 0x5c){
         auxSize++;
         str[auxSize+4] = 0x5d;
         str[auxSize+5] = 0x7c;
         str[auxSize+6] = FLAG_RCV;
+
     }
-    else {
+    else{
         str[auxSize+4] = xor;
         str[auxSize+5] = FLAG_RCV;
     }
 
-    for (int i = 0; i < auxSize+6; i++) {
-        resendStr[i] = str[i];
+    for(j = 0; j < auxSize+6; j++){
+        resendStr[j] = str[j];
     }
 
-    resendSize = auxSize + 6;
+    resendSize = auxSize+6;
 
     resData = write(fd, str, auxSize+6);
-    if (resData < 0) {
-        return -1; // Write failed
-    }
-
     printf("%d bytes written\n", resData);
 
-    alarm(alarmTime);
+    alarm(alarmTime); 
     readRR(fd);
     printf("--- RR READ OK ! ---\n");
     alarm(0);
