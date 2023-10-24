@@ -295,23 +295,23 @@ int llwrite(const unsigned char *buf, int bufSize) {
     if (buf == NULL || bufSize <= 0 || bufSize > 2000)
         return -1; // Invalid buffer or size
     
-    int i, j, resData, auxSize = 0;
-    for(i = 0; i < bufSize; i++){
+    int resData, auxSize = 0;
+    for(int i = 0; i < bufSize; i++){
         printf("var = 0x%02x\n",(unsigned int)(buf[0] & 0xff));
     }
     char xor = buf[0], auxBuf[2000];
-    for(i = 1; i < bufSize; i++)
+    for(int i = 1; i < bufSize; i++)
         xor = xor^buf[i];
 
-    /* byte stuffing */
-    for(i = 0; i < bufSize; i++){
+    // Byte stuffing
+    for(int i = 0; i < bufSize; i++){
         auxBuf[i] = buf[i];
     }
     
     auxSize = bufSize;
 
-    for(i = 0; i < auxSize; i++){
-        if(auxBuf[i] == 0x5d){ /*if (0x5d) occurs, it is replaced by the sequence 0x5d 0x7d */
+    for(int i = 0; i < auxSize; i++){
+        if(auxBuf[i] == 0x5d){ // If (0x5d) occurs, it is replaced by the sequence 0x5d 0x7d
             for(j = auxSize+1; j > i+1; j--)
                 auxBuf[j] = auxBuf[j-1];
             auxBuf[i+1] = 0x7d;
@@ -319,8 +319,8 @@ int llwrite(const unsigned char *buf, int bufSize) {
         }
     }
 
-    for(i = 1; i < auxSize; i++){
-        if(auxBuf[i] == 0x5c){ /*if (0x5c) occurs, it is replaced by the sequence 0x5d 0x7c */
+    for(int i = 1; i < auxSize; i++){
+        if(auxBuf[i] == 0x5c){ // If (0x5c) occurs, it is replaced by the sequence 0x5d 0x7c
             auxBuf[i] = 0x5d;
             for(j = auxSize+1; j > i+1; j--)            
                 auxBuf[j] = auxBuf[j-1];
@@ -331,17 +331,17 @@ int llwrite(const unsigned char *buf, int bufSize) {
 
     char str[auxSize+6];
 
-    str[0] = FLAG_RCV;          /*   F   */
-    str[1] = A_RCV;             /*   A   */
-    if (switchwrite_C_RCV == 0) /*   C   */
+    str[0] = FLAG_RCV;          // F
+    str[1] = A_RCV;             // A
+    if (switchwrite_C_RCV == 0) // C
         str[2] = C_NS_0;       
     else
         str[2] = C_NS_1;
     switchwrite_C_RCV = !switchwrite_C_RCV;
-    str[3] = str[2]^A_RCV;      /* BCCOK */
+    str[3] = str[2]^A_RCV;      // BCCOK
 
-    for(j = 0; j < auxSize; j++)
-        str[j+4] = auxBuf[j];
+    for(int i = 0; i < auxSize; i++)
+        str[i+4] = auxBuf[i];
     
     if(xor == 0x5c){
         auxSize++;
@@ -355,8 +355,8 @@ int llwrite(const unsigned char *buf, int bufSize) {
         str[auxSize+5] = FLAG_RCV;
     }
 
-    for(j = 0; j < auxSize+6; j++){
-        resendStr[j] = str[j];
+    for(int i = 0; i < auxSize+6; i++){
+        resendStr[i] = str[i];
     }
 
     resendSize = auxSize+6;
@@ -485,8 +485,9 @@ int llread(unsigned char *packet) {
                 printf("---- Frame Read OK ----");
             }
             else {      // Error in XOR value
-                STOP = TRUE;
-                printf("---- Frame Read OK ----");
+                printf("XOR value is: 0x%02x\n Should be: 0x%02x\n", (unsigned int)(xor & 0xff), (unsigned int)(aux & 0xff));
+                printf("\n---- BCC2 failed! ----\n");
+                return -1;
             }
         }
 
