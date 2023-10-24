@@ -22,7 +22,7 @@
 #define C_SET 0x03
 #define C_UA 0x07
 #define C_NS_0 0x00
-#define C_NS_1 0x02
+#define C_NS_1 0x00
 #define C_RR_0 0x05
 #define C_RR_1 0x85
 #define C_REJ_0 0x01
