@@ -201,6 +201,7 @@ void readRR(int fd) {
         C_RCV = C_RR_0;
     
     processMessage(fd, C_RCV);
+    switchreadRR = !switchreadRR;
 }
 
 void readDISC(int fd) {
