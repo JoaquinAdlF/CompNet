@@ -115,10 +115,10 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             aux_bytes_read = bytes_read;
             bytes_read = llread(buffer);
 
-            if (bytes_read == -1 || tries == 0) {
+            if (bytes_read == -1 && tries == 0) {
                 fprintf(stderr, "Error receiving from link layer\n");
                 break;
-            } else if (bytes_read == -2 || tries > 0) {
+            } else if (bytes_read == -2 && tries > 0) {
                 tries --;
                 fprintf(stderr, "---- Error in frame. Retrying ----");
                 bytes_read = aux_bytes_read;

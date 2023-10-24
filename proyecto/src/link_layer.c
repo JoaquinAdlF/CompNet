@@ -454,11 +454,11 @@ int llwrite(const unsigned char *buf, int bufSize) {
         alarm(alarmTime); 
         acceptRR = readRR(fd);
 
-        if (acceptRR == 0 || tries > 0) {
+        if (acceptRR == 0 && tries > 0) {
             tries--;
             printf("---- REJ Read. Retrying transfer ----\n");
             alarm(0);
-        } else if (acceptRR == 0 || tries == 0) {
+        } else if (acceptRR == 0 && tries == 0) {
             printf("---- Couldn't send frame correctly ----\n");
             return -1;
         }
