@@ -97,13 +97,25 @@ void sendRR(int fd) {
     printf("---- Sending RR ----\n");
     char C_RCV;
     if(switchRR == 0)
-        C_RCV = C_RR_1;
-    else
         C_RCV = C_RR_0;
+    else
+        C_RCV = C_RR_1;
 
     sendFrame(fd, C_RCV);
 
     switchRR = !switchRR;
+
+}
+
+void sendREJ(int fd) {
+    printf("---- Sending RR ----\n");
+    char C_RCV;
+    if(switchRR == 0)
+        C_RCV = C_REJ_0;
+    else
+        C_RCV = C_REJ_1;
+
+    sendFrame(fd, C_RCV);
 
 }
 
@@ -191,16 +203,89 @@ void readUA(int fd) {
     processMessage(fd, C_UA);
 }
 
-void readRR(int fd) {
+int readRR(int fd) {
     printf("---- Reading RR ----\n");
-    char C_RCV;
-    if(switchreadRR == 0)
-        C_RCV = C_RR_1;
-    else
+    char C_RCV, C_REJ;
+    if(switchreadRR == 0) {
         C_RCV = C_RR_0;
-    
-    processMessage(fd, C_RCV);
+        C_REJ = C_REJ_0;
+}
+    else {
+        C_RCV = C_RR_1;
+        C_REJ = C_REJ_1;
+    }
+
+    int res, SMFlag = 0;
+    char buf[255];
+
+    while (STOP == FALSE) {
+        res = read(fd, buf, 1);
+
+        if (res == -1) {
+            perror("Error reading from descriptor");
+            return -1; // exit the function in case of an error
+        }
+
+        switch (frameState) {
+            case stateStart:
+                if (buf[0] == FLAG_RCV)
+                    frameState = stateFlagRCV;
+                break;
+
+            case stateFlagRCV:
+                if (buf[0] == FLAG_RCV) {
+                    frameState = stateFlagRCV;
+                    SMFlag = 0;
+                } else if (buf[0] == A_RCV || buf[0] == ALT_A_RCV) {
+                    frameState = stateARCV;
+                } else {
+                    frameState = stateStart;
+                    SMFlag = 0;
+                }
+                break;
+
+            case stateARCV:
+                if (buf[0] == FLAG_RCV)
+                    frameState = stateFlagRCV;
+                else if (buf[0] == C_REJ) {
+                    return 0;
+                } else if (buf[0] == C_RCV)
+                    frameState = stateCRCV;
+                else {
+                    frameState = stateStart;
+                    SMFlag = 0;
+                }
+                break;
+
+            case stateCRCV:
+                if (buf[0] == FLAG_RCV) {
+                    frameState = stateFlagRCV;
+                    SMFlag = 0;
+                } else if (buf[0] == (A_RCV^C_REJ) || buf[0] == (ALT_A_RCV^C_REJ)) {
+                    return 0;
+                } else if (buf[0] == (A_RCV^C_RCV) || buf[0] == (ALT_A_RCV^C_RCV)) {
+                    frameState = stateBCCOK;
+                    if (C_RCV != C_SET) STOP = TRUE;
+                } else {
+                    frameState = stateStart;
+                    SMFlag = 0;
+                }
+                break;
+
+            case stateBCCOK:
+                frameState = stateStart;
+                break;
+        }
+
+        if (buf[0] == FLAG_RCV && SMFlag == 1)
+            STOP = TRUE;
+
+        if (buf[0] == FLAG_RCV)
+            SMFlag = 1;
+    }
+    STOP = FALSE;
     switchreadRR = !switchreadRR;
+    return 1;
 }
 
 void readDISC(int fd) {
@@ -360,11 +445,26 @@ int llwrite(const unsigned char *buf, int bufSize) {
 
     resendSize = auxSize+6;
 
-    resData = write(fd, str, auxSize+6);
-    printf("%d bytes written\n", resData);
+    int acceptRR, tries = 3;
+    // Handle REJ
+    do {
+        resData = write(fd, str, auxSize+6);
+        printf("%d bytes written\n", resData);
 
-    alarm(alarmTime); 
-    readRR(fd);
+        alarm(alarmTime); 
+        acceptRR = readRR(fd);
+
+        if (acceptRR == 0 || tries > 0) {
+            tries--;
+            printf("---- REJ Read. Retrying transfer ----\n");
+            alarm(0);
+        } else if (acceptRR == 0 || tries == 0) {
+            printf("---- Couldn't send frame correctly ----\n");
+            return -1;
+        }
+        
+
+    } while (acceptRR == 0);
     printf("--- RR READ OK ! ---\n");
     alarm(0);
     alarmCounter = 0;
@@ -490,8 +590,9 @@ int llread(unsigned char *packet) {
             }
             else {      // Error in XOR value
                 printf("XOR value is: 0x%02x\n Should be: 0x%02x\n", (unsigned int)(xor & 0xff), (unsigned int)(aux & 0xff));
-                printf("\n---- BCC2 failed! ----\n");
-                return -1;
+                printf("\n---- BCC2 failed! Sending REJ to retry ----\n");
+                sendREJ(fd);
+                return -2;
             }
         }
 

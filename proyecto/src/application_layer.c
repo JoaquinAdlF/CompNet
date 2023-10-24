@@ -106,22 +106,25 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             exit(1);
         }
 
-        int bytes_read = 0;
-        int write_result = 0;
+        int bytes_read = 0, aux_bytes_read, write_result = 0, tries = 3;
         const int buf_size = MAX_PAYLOAD_SIZE;
         unsigned char buffer[buf_size];
         int total_bytes = 0;
 
         while (bytes_read >= 0) {
+            aux_bytes_read = bytes_read;
             bytes_read = llread(buffer);
-            printf("Reading...\n");
 
-            if (bytes_read < 0) {
+            if (bytes_read == -1 || tries == 0) {
                 fprintf(stderr, "Error receiving from link layer\n");
                 break;
+            } else if (bytes_read == -2 || tries > 0) {
+                tries --;
+                fprintf(stderr, "---- Error in frame. Retrying ----");
+                bytes_read = aux_bytes_read;
             }
 
-            else if (bytes_read > 0) {
+            if (bytes_read > 0) {
                 if (buffer[0] == 1) {
                     write_result = write(file_desc, buffer+1, bytes_read-1);
 
@@ -131,6 +134,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     }
 
                     total_bytes = total_bytes + write_result;
+                    tries = 3;
                     printf("read from file -> write to link layer, %d %d %d\n", bytes_read, write_result, total_bytes);
                 }
                 else if (buffer[0] == 0) {
