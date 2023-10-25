@@ -322,6 +322,8 @@ int llopen(LinkLayer connectionParameters) {
 
     tcflush(fd, TCIOFLUSH);     // Flushes data received but not read
 
+    sleep(1);
+
     if (tcsetattr(fd,TCSANOW,&newtio) == -1) {     // Set the new port settings
         perror("tcsetattr");
         exit(-1);
@@ -347,6 +349,7 @@ int llopen(LinkLayer connectionParameters) {
         printf("---- UA Read OK ----\n");
         alarmCounter = 0;
 
+        sleep(1);
 
         return 0;
     }
@@ -357,6 +360,8 @@ int llopen(LinkLayer connectionParameters) {
         readSET(fd);
         printf("---- SET Read OK ----\n");
         sendUA(fd);
+
+        sleep(1);
 
         return 0;
     }
@@ -628,6 +633,7 @@ int llclose(int showStatistics)
         alarmCounter = 0;
 
         sendUA(fd);
+        sleep(1);
 
         printf("---- Ready to close connection ----\n");
 
@@ -640,6 +646,7 @@ int llclose(int showStatistics)
     }
 
     else {
+        sleep(1);
         alarm(alarmTime);
         readDISC(fd);
         printf("---- DISC read ok ----\n");
@@ -657,7 +664,7 @@ int llclose(int showStatistics)
         alarmCounter = 0;
 
         printf("---- Ready to close connection ----\n");
-
+        sleep(1);
         if (tcsetattr(fd,TCSANOW,&oldtio) == -1){
             perror("tcsetattr");
             exit(-1);
