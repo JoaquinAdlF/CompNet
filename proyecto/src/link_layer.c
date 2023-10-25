@@ -293,10 +293,6 @@ void readDISC(int fd) {
     processMessage(fd, C_DISC);
 }
 
-void sendTux() {
-    printf("\nWork by: Joaquin Aguirre de la Fuente, FEUP, RCOM 2023/24\n\n");
-}
-
 ////////////////////////////////////////////////
 // LLOPEN
 ////////////////////////////////////////////////
@@ -641,7 +637,6 @@ int llclose(int showStatistics)
         }
 
         close(fd);
-        return 0;
     }
 
     else {
@@ -669,7 +664,8 @@ int llclose(int showStatistics)
         }
 
         close(fd);
-        return 0;
     }
-    
+
+    printf("\nWork by: Joaquin Aguirre de la Fuente, FEUP, RCOM 2023/24\n\n");
+    return 0;
 }
