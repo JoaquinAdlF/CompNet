@@ -65,7 +65,7 @@ void alarmPickup() {
     alarm(alarmTime);
 }
 
-void sendFrame(int fd, unsigned char C) {
+void sendFrame(unsigned char C) {
     int resFrame;
     char frame[5];
     frame[0] = FLAG_RCV;    // F
@@ -83,17 +83,17 @@ void sendFrame(int fd, unsigned char C) {
     printf("%d bytes written\n", resFrame);
 }
 
-void sendSET(int fd) {
+void sendSET() {
     printf("--- Sending SET ---\n");
-    sendFrame(fd, C_SET);
+    sendFrame(C_SET);
 }
 
-void sendUA(int fd) {    
+void sendUA() {    
     printf("--- Sending UA ---\n");
-    sendFrame(fd, C_UA);
+    sendFrame(C_UA);
 }
 
-void sendRR(int fd) {
+void sendRR() {
     printf("---- Sending RR ----\n");
     char C_RCV;
     if(switchRR == 0)
@@ -101,13 +101,13 @@ void sendRR(int fd) {
     else
         C_RCV = C_RR_1;
 
-    sendFrame(fd, C_RCV);
+    sendFrame(C_RCV);
 
     switchRR = !switchRR;
 
 }
 
-void sendREJ(int fd) {
+void sendREJ() {
     printf("---- Sending RR ----\n");
     char C_RCV;
     if(switchRR == 0)
@@ -115,16 +115,16 @@ void sendREJ(int fd) {
     else
         C_RCV = C_REJ_1;
 
-    sendFrame(fd, C_RCV);
+    sendFrame(C_RCV);
 
 }
 
-void sendDISC(int fd) {
+void sendDISC() {
     printf("--- Sending DISC ---\n");
-    sendFrame(fd, C_DISC);
+    sendFrame(C_DISC);
 }
 
-void processMessage(int fd, char messageType) {
+void processMessage(char messageType) {
     int res, SMFlag = 0;
     char buf[255];
 
@@ -193,17 +193,17 @@ void processMessage(int fd, char messageType) {
 }
 
 
-void readSET(int fd) {
+void readSET() {
     printf("---- Reading SET ----\n");
-    processMessage(fd, C_SET);
+    processMessage(C_SET);
 }
 
-void readUA(int fd) {
+void readUA() {
     printf("--- Reading UA ---\n");
-    processMessage(fd, C_UA);
+    processMessage(C_UA);
 }
 
-int readRR(int fd) {
+int readRR() {
     printf("---- Reading RR ----\n");
     char C_RCV, C_REJ;
     if(switchreadRR == 0) {
@@ -288,9 +288,9 @@ int readRR(int fd) {
     return 1;
 }
 
-void readDISC(int fd) {
+void readDISC() {
     printf("--- Reading DISC ---\n");
-    processMessage(fd, C_DISC);
+    processMessage(C_DISC);
 }
 
 ////////////////////////////////////////////////
@@ -333,7 +333,7 @@ int llopen(LinkLayer connectionParameters) {
 
     if (connectionParameters.role == LlTx) {
         (void) signal(SIGALRM, alarmPickup);
-        sendSET(fd);
+        sendSET();
         for (int i = 0; i < 5; i++) {
             resendStr[i] = SET[i];;
         }
@@ -344,7 +344,7 @@ int llopen(LinkLayer connectionParameters) {
 
         alarm(alarmTime);
         printf("---- UA State Machine has started ----\n");
-        readUA(fd);
+        readUA();
         alarm(0);
         printf("---- UA Read OK ----\n");
         alarmCounter = 0;
@@ -357,9 +357,9 @@ int llopen(LinkLayer connectionParameters) {
     else if (connectionParameters.role == LlRx) {
         printf("---- SET State Machine has started ----\n");
 
-        readSET(fd);
+        readSET();
         printf("---- SET Read OK ----\n");
-        sendUA(fd);
+        sendUA();
 
         sleep(1);
 
@@ -449,7 +449,7 @@ int llwrite(const unsigned char *buf, int bufSize) {
         printf("%d bytes written\n", resData);
 
         alarm(alarmTime); 
-        acceptRR = readRR(fd);
+        acceptRR = readRR();
 
         if (acceptRR == 0 && tries > 0) {
             tries--;
@@ -591,7 +591,7 @@ int llread(unsigned char *packet) {
             else {      // Error in XOR value, sends REJ to retry
                 printf("XOR value is: 0x%02x\n Should be: 0x%02x\n", (unsigned int)(xor & 0xff), (unsigned int)(aux & 0xff));
                 printf("\n---- BCC2 failed! Sending REJ to retry ----\n");
-                sendREJ(fd);
+                sendREJ();
                 return -2;
             }
         }
@@ -610,7 +610,7 @@ int llread(unsigned char *packet) {
     printf("\n\n --- DESTUFFED DATA ---\n\n");
     bytes_read = x-6;
 
-    sendRR(fd);
+    sendRR();
 
     return bytes_read;
 }
@@ -623,19 +623,19 @@ int llclose(int showStatistics)
     printf("\n\n---- Closing connection ----\n\n");
 
     if (showStatistics == 1 ){
-        sendDISC(fd);
+        sendDISC();
 
         for(int i = 0; i < 5; i++) {
             resendStr[i] = DISC[i];
         }
 
         alarm(alarmTime);
-        readDISC(fd);
+        readDISC();
         printf("---- DISC read ok ----\n");
         alarm(0);
         alarmCounter = 0;
 
-        sendUA(fd);
+        sendUA();
         sleep(1);
 
         printf("---- Ready to close connection ----\n");
@@ -651,17 +651,17 @@ int llclose(int showStatistics)
     else {
         sleep(1);
         alarm(alarmTime);
-        readDISC(fd);
+        readDISC();
         printf("---- DISC read ok ----\n");
         alarm(0);
         alarmCounter = 0;
 
-        sendDISC(fd);
+        sendDISC();
         for(int i = 0; i < 5; i++)
             resendStr[i] = DISC[i];
         
         alarm(alarmTime);
-        readUA(fd);
+        readUA();
         printf("---- UA read ok ----\n");
         alarm(0);
         alarmCounter = 0;
