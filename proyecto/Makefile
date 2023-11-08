@@ -13,7 +13,7 @@ CABLE_DIR = cable/
 TX_SERIAL_PORT = /dev/ttyS2
 RX_SERIAL_PORT = /dev/ttyS2
 
-TX_FILE = penguin.gif
+TX_FILE = penguin2.gif
 RX_FILE = penguin-received.gif
 
 # Targets
@@ -21,7 +21,7 @@ RX_FILE = penguin-received.gif
 all: $(BIN)/main $(BIN)/cable
 
 $(BIN)/main: main.c $(SRC)/*.c
-	$(CC) $(CFLAGS) -o $@ $^ -I$(INCLUDE)
+	$(CC) $(CFLAGS) -o $@ $^ -I$(INCLUDE) -lm
 
 $(BIN)/cable: $(CABLE_DIR)/cable.c
 	$(CC) $(CFLAGS) -o $@ $^
