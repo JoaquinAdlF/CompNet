@@ -13,7 +13,7 @@ CABLE_DIR = cable/
 TX_SERIAL_PORT = /dev/ttyS2
 RX_SERIAL_PORT = /dev/ttyS2
 
-TX_FILE = penguin2.gif
+TX_FILE = penguin.gif
 RX_FILE = penguin-received.gif
 
 # Targets
