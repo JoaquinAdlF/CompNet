@@ -378,7 +378,6 @@ int llopen(LinkLayer connectionParameters)
             return -1;
         }
     } else if (role == LlRx) {
-        printf("entered loop");
         // Loop through control packet
         while (state != STOP) {
             if (read(fd, &byte, 1) > 0) {
@@ -426,9 +425,7 @@ int llopen(LinkLayer connectionParameters)
                  
                         if (byte == FLAG) {
                             state = STOP;
-                            printf("Validated packet");
                         } else {
-                            printf("BCC1");
                             state = START;
                         }
                        
