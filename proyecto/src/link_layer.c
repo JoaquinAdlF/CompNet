@@ -276,9 +276,9 @@ void ShowStatistics(){
     printf("\n--- Statistics ---\n");
     double total_time_seconds = ((double) (end - start)) / (double) CLOCKS_PER_SEC;
     printf("Time elapsed: %f\n", total_time_seconds);
-    printf("Maximum Data to be transmitted: %d\n", MAX_PAYLOAD_SIZE);
-    printf("Number of bytes sent: %d\n", bytesSent);
     printf("Time spent sending bits: %f\n", cpuTotalTime);
+    printf("Data transfer limit: %d\n", MAX_PAYLOAD_SIZE);
+    printf("Number of bytes sent: %d\n", bytesSent);
     double speed = (double)(bytesSent * 8)/ total_time_seconds;
     printf("Speed: %f bps\n", speed);
 }
@@ -796,7 +796,6 @@ int llclose(int showStatistics)
                     return -1;
                 }
                 if (byte == C_UA) {
-                    printf("Closing connection...\n");
                     end = clock();
                     endProcessRx = clock();
                     cpuTotalTime += ((double) (endProcessRx - startProcessRx)) / (double) CLOCKS_PER_SEC;
