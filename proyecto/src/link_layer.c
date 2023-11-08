@@ -279,8 +279,8 @@ void ShowStatistics(){
     printf("Maximum Data to be transmitted: %d\n", MAX_PAYLOAD_SIZE);
     printf("Number of bytes sent: %d\n", bytesSent);
     printf("Time spent sending bits: %f\n", cpuTotalTime);
-    double debit= (double)(bytesSent * 8)/ total_time_seconds;
-    printf("Debit: %f bps\n", debit);
+    double speed = (double)(bytesSent * 8)/ total_time_seconds;
+    printf("Speed: %f bps\n", speed);
 }
 
 ////////////////////////////////////////////////
