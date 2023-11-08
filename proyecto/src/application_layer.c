@@ -203,8 +203,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         unsigned char* buffer = (unsigned char*) malloc (MAX_PAYLOAD_SIZE);
         int packetSize = -1;
         while ((packetSize = llread(buffer)) < 0);
-        
-        printf("--- UA accepted ---\n");
 
         // Initialize a variable to hold the size of the data and loop over the next 8 bytes
         unsigned long size = 0;
@@ -213,10 +211,13 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             size += buffer[i + 3];
         }
 
+        int bytesRead;
+
         // Read the buffer
         while(1) {
             // Read until packet has no data
-            if(llread(buffer) == -1) {
+            bytesRead = llread(buffer);
+            if(bytesRead == -1) {
                 printf("Keep reading...\n");
                 continue;
             }
@@ -231,6 +232,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             
             // Write data to the file descriptor
             write(fd, buffer + 3, current_size);
+
+            printf("Bytes read: %i\n", bytesRead);
         }
 
         // Check if the first byte indicates the end of data

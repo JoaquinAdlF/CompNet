@@ -535,12 +535,12 @@ int llwrite(const unsigned char *buf, int bufSize)
             if(result == 0) continue;
             
             // Retry if data was rejected
-            else if(result==C_REJ(0) || result==C_REJ(1)){
+            else if(result == C_REJ(0) || result == C_REJ(1)){
                 reject = 1;
             }
 
             // Set iframes if data was accepted
-            else if (result==C_RR(0) || result==C_RR(1)){
+            else if (result == C_RR(0) || result == C_RR(1)){
                 accept = 1;
                 iFrameNumTx= (iFrameNumTx+1)%2;
             }
@@ -651,7 +651,6 @@ int llread(unsigned char *packet)
                             accumulator=(accumulator ^ packet[i]);
                         }
                         if (bcc2 == accumulator) {
-                            printf("Sending RR\n");
                             state = STOP;
                             sendSupervisionFrame(A_FSENDER, C_RR(iFrameNumRx));
                             iFrameNumRx = (iFrameNumRx + 1) % 2;
