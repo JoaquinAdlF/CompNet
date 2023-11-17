@@ -12,12 +12,6 @@
 #include "application_layer.h"
 #include "link_layer.h"
 
-#include "application_layer.h"
-
-#define C_DATA 1
-#define C_END 3
-double t_prop;
-
 void transmitter(const char *serialPort, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
