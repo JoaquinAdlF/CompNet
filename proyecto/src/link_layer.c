@@ -570,8 +570,9 @@ int llread(unsigned char *packet)
     clock_t startProcess, endProcess;
     startProcess = clock();
     LinkLayerState state = START;
-    while (state!= STOP){
-        if(read(fd, &byte,1) >0) {
+
+    while (state!= STOP) {
+        if(read(fd, &byte,1) > 0) {
             bytesSent++;
 
             switch (state) {
@@ -622,12 +623,16 @@ int llread(unsigned char *packet)
                     break;
 
                 case BCC1:
+                    // End of transmission, disconnect
                     if (controlField == 0x0B) {
                         return 0;
                     }
+                    // Data was received
                     if (byte == ESC) {
                         state = DATA_RECEIVED_ESC;
-                    } else {
+                    }
+                    // Reading data
+                    else {
                         state = READING_DATA; 
                         packet[0] = byte; 
                         data_byte_counter++;
@@ -639,14 +644,18 @@ int llread(unsigned char *packet)
                         state = DATA_RECEIVED_ESC;
                         break;
                     }
-                    if (byte== FLAG) {
+                    if (byte == FLAG) {
                         unsigned char bcc2 = packet[data_byte_counter-1];
                         unsigned char accumulator = 0;
                         data_byte_counter--;
                         packet[data_byte_counter] ='\0';
+                        
+                        // Destuff data
                         for (int i =0; i <=data_byte_counter; i++) {
-                            accumulator=(accumulator ^ packet[i]);
+                            accumulator = (accumulator ^ packet[i]);
                         }
+
+                        // If bcc2 is correct we send RR(i)
                         if (bcc2 == accumulator) {
                             state = STOP;
                             sendSupervisionFrame(A_FSENDER, C_RR(iFrameNumRx));
@@ -656,10 +665,13 @@ int llread(unsigned char *packet)
                             endProcess = clock();
                             cpuTotalTime += ((double) (endProcess - startProcess)) / (double) CLOCKS_PER_SEC;
                             return data_byte_counter;
-                        } else {
-                        printf("Sending REJ\n");
-                        sendSupervisionFrame(A_FSENDER, C_REJ(iFrameNumRx));
-                        return -1;
+                        } 
+                        
+                        // If bcc2 was incorrect we send REJ(i)
+                        else {
+                            printf("Sending REJ\n");
+                            sendSupervisionFrame(A_FSENDER, C_REJ(iFrameNumRx));
+                            return -1;
                         }
                     } else {
                         packet[data_byte_counter++] = byte;
@@ -690,8 +702,7 @@ int llread(unsigned char *packet)
 ////////////////////////////////////////////////
 int llclose(int showStatistics)
 {
-    clock_t startProcessTx, endProcessTx;
-    clock_t startProcessRx, endProcessRx;
+    clock_t startProcess, endProcess;
     alarmCount = 0;
     alarmEnabled = FALSE;
     LinkLayerState state = START;
@@ -699,14 +710,15 @@ int llclose(int showStatistics)
     (void) signal(SIGALRM,alarmHandler);
 
     if (role == LlTx) {
-        startProcessTx = clock();
 
         while (state != STOP &&  (alarmCount < attempts)) {
+            // Send disconnect signal
             if (alarmEnabled == FALSE) {
                 sendSupervisionFrame(A_FSENDER, C_DISC);
                 alarm(timeout);
                 alarmEnabled = TRUE;
             }
+            // Read disconnect response
             if (alarmEnabled == TRUE) {
                 if (read(fd ,&byte, 1) > 0) {
                     bytesSent++;
@@ -769,11 +781,8 @@ int llclose(int showStatistics)
                                 perror("tcsetattr");
                                 return -1;
                             }
-                            endProcessTx = clock();
-                            cpuTotalTime += ((double) (endProcessTx - startProcessTx)) / (double) CLOCKS_PER_SEC;
 
                             close(fd);
-                            ShowStatistics();
 
                             return 0;
 
@@ -784,24 +793,28 @@ int llclose(int showStatistics)
             }
         }
     } else if (role == LlRx) {
-        startProcessRx = clock();
+        startProcess = clock();
         while (1) {
+            // Wait for disconnection signal
             if (waitingforUA == FALSE) {
                 byte = readresponseByte(waitingforUA);
                 if(byte == C_DISC) {
                     waitingforUA = TRUE;
                 }
             }
-
+            
+            // Read disconnection signal while alarm is active
             if (waitingforUA == TRUE) {
                 byte = readresponseByte(waitingforUA);
+                // If disconnect failed exit with -1
                 if (byte == -1) {
                     return -1;
                 }
+                // If disconnect worked show statistics
                 if (byte == C_UA) {
                     end = clock();
-                    endProcessRx = clock();
-                    cpuTotalTime += ((double) (endProcessRx - startProcessRx)) / (double) CLOCKS_PER_SEC;
+                    endProcess = clock();
+                    cpuTotalTime += ((double) (endProcess - startProcess)) / (double) CLOCKS_PER_SEC;
 
                     if (tcsetattr(fd, TCSANOW, &oldtio) == -1) {
                         perror("tcsetattr");
