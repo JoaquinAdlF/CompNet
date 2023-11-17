@@ -22,7 +22,7 @@
 #define MAX_PAYLOAD_SIZE 1000
 
 #define FLAG 0x7E
-#define ESC 0x7D
+#define ESC 0x7d
 #define A_FSENDER 0x03
 #define A_FRECEIVER 0x01
 #define C_SET 0x03
@@ -491,10 +491,10 @@ int llwrite(const unsigned char *buf, int bufSize)
             }
             frame[j++] = ESC;
             if(bufwithbcc[i] == FLAG){
-                frame[j++]=0x5E;
+                frame[j++] = 0x5e;
             }
             if(bufwithbcc[i] == ESC){
-                frame[j++]=0x5D;
+                frame[j++] = 0x5d;
             }
         }
         else {
@@ -668,10 +668,10 @@ int llread(unsigned char *packet)
 
                 case DATA_RECEIVED_ESC:
                     state = READING_DATA;
-                    if(byte == 0X5E) {
+                    if(byte == 0X5e) {
                         packet[data_byte_counter++] = FLAG;
                     }
-                    if (byte == 0x5D) {
+                    if (byte == 0x5d) {
                         packet[data_byte_counter++] = ESC;
                     }
                     break;
