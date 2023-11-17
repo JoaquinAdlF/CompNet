@@ -454,8 +454,8 @@ int llopen(LinkLayer connectionParameters)
 int llwrite(const unsigned char *buf, int bufSize)
 {
     // Set up alarm
-    alarmCount=0;
-    alarmEnabled=FALSE;
+    alarmCount = 0;
+    alarmEnabled = FALSE;
 
     // Initialize frame
     int frameSize = 6 + bufSize;
@@ -464,7 +464,7 @@ int llwrite(const unsigned char *buf, int bufSize)
     frame[1] = A_FSENDER;
     frame[2] = C_INF(iFrameNumTx); 
     frame[3] = frame[1] ^ frame[2];
-    alarmEnabled=FALSE;
+    alarmEnabled = FALSE;
     memcpy(frame + 4, buf, bufSize);
     unsigned char BCC2 = buf[0];
 
@@ -474,7 +474,7 @@ int llwrite(const unsigned char *buf, int bufSize)
     }
 
     // Make new buffer and copy the contens of buf into it
-    unsigned char* bufwithbcc=(unsigned char*)malloc(bufSize+1);
+    unsigned char* bufwithbcc = (unsigned char*)malloc(bufSize+1);
     memcpy(bufwithbcc, buf, bufSize);
     bufwithbcc[bufSize]= BCC2;
 
@@ -772,6 +772,9 @@ int llclose(int showStatistics)
                             endProcessTx = clock();
                             cpuTotalTime += ((double) (endProcessTx - startProcessTx)) / (double) CLOCKS_PER_SEC;
 
+                            close(fd);
+                            ShowStatistics();
+
                             return 0;
 
                         default:
@@ -799,6 +802,7 @@ int llclose(int showStatistics)
                     end = clock();
                     endProcessRx = clock();
                     cpuTotalTime += ((double) (endProcessRx - startProcessRx)) / (double) CLOCKS_PER_SEC;
+
                     if (tcsetattr(fd, TCSANOW, &oldtio) == -1) {
                         perror("tcsetattr");
                         return -1;

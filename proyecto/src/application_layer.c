@@ -22,7 +22,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
     
-    int size_aux=  0; 
+    int size_aux = 0; 
     int result;
 
     if (strcmp(role, "tx") == 0) {
@@ -97,9 +97,9 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("Size of control packet: %d \n", size_aux);
 
         // Write the control packet
-        int err= llwrite(control_packet, size_aux);
+        int err = llwrite(control_packet, size_aux);
 
-        if (err ==-1) {
+        if (err == -1) {
             printf("Error transmitting information.1\n");
             return;
         }
