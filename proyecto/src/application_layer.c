@@ -42,7 +42,7 @@ void transmitter(const char *serialPort, int baudRate,
     int L2 = strlen(filename);
 
     // Calculate the total size needed for auxiliary control packet.
-    size_aux = 1 + 1 + 1 + L1 + 2 + L2;
+    size_aux = 5 + L1 + L2;
 
     // Allocate the control packet with the calculated size.
     unsigned char* control_packet = (unsigned char*)malloc(size_aux);
