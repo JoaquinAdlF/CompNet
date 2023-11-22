@@ -122,12 +122,12 @@ int establishConnection(LinkLayer connectionParameters) {
 }
 
 // Function to send the supervision frame
-int sendSupervisionFrame(unsigned char A, unsigned char C) {
-    unsigned char FRAME[5] = {FLAG, A, C, A ^ C, FLAG};
-    return write(fd, FRAME, 5);
+int sendFrame(unsigned char A, unsigned char C) {
+    unsigned char frame[5] = {FLAG, A, C, A ^ C, FLAG};
+    return write(fd, frame, 5);
 }
 
-// Funciton to read the ontrol byte
+// Funciton to read the ontrol byte with the information
 unsigned char readControlByte() {
     clock_t startProcess, endProcess;
     startProcess = clock();
@@ -200,8 +200,8 @@ unsigned char readControlByte() {
 
 }
 
-// Function to read the response byte
-unsigned char readresponseByte(bool waitingforUA) {
+// Function to read the byte for UA or DISC
+unsigned char readByte(bool waitingforUA) {
     unsigned char byte = 0;
     unsigned char controlByte = 0;
     LinkLayerState state = START;
@@ -264,7 +264,7 @@ unsigned char readresponseByte(bool waitingforUA) {
         }
     }
     if(waitingforUA == FALSE){ 
-        if(sendSupervisionFrame(A_FRECEIVER,C_DISC) == -1) {
+        if(sendFrame(A_FRECEIVER,C_DISC) == -1) {
             return -1;
         }  
     }
@@ -315,7 +315,7 @@ int llopen(LinkLayer connectionParameters)
         while ((alarmCount < attempts) && state != STOP) {
             // Enable alarm
             if (alarmEnabled == FALSE) {
-                if(sendSupervisionFrame(A_FSENDER, C_SET) == -1)
+                if(sendFrame(A_FSENDER, C_SET) == -1)
                     return -1;
                 alarm(timeout);
                 alarmEnabled = TRUE;
@@ -436,7 +436,7 @@ int llopen(LinkLayer connectionParameters)
             }
         }
         // If couldn'n send UA frame
-        if(sendSupervisionFrame(A_FRECEIVER, C_UA) == -1) {
+        if(sendFrame(A_FRECEIVER, C_UA) == -1) {
             return -1;
         }
     }
@@ -476,7 +476,7 @@ int llwrite(const unsigned char *buf, int bufSize)
     // Make new buffer and copy the contens of buf into it
     unsigned char* bufwithbcc = (unsigned char*)malloc(bufSize+1);
     memcpy(bufwithbcc, buf, bufSize);
-    bufwithbcc[bufSize]= BCC2;
+    bufwithbcc[bufSize] = BCC2;
 
     int j = 4;
 
@@ -486,7 +486,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         {
             frameSize= frameSize+1;
             frame = realloc(frame,frameSize);
-            if(frame==NULL) {
+            if(frame == NULL) {
                 return -1;
             }
             frame[j++] = ESC;
@@ -509,13 +509,13 @@ int llwrite(const unsigned char *buf, int bufSize)
     int accept = 0;
 
     // Loop and retry in case of error
-    while (alarmCount< attempts) {
-        if(alarmEnabled==FALSE){
+    while (alarmCount < attempts) {
+        if(alarmEnabled == FALSE){
         
             alarm(timeout);
-            reject=0;
-            accept=0; 
-            alarmEnabled=TRUE;
+            reject = 0;
+            accept = 0; 
+            alarmEnabled = TRUE;
 
             if(write(fd, frame, frameSize) == -1){
                 printf("Error writing.\n");
@@ -524,7 +524,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         }
       
       
-        while (reject==0 && accept==0 && alarmEnabled==TRUE)
+        while (reject == 0 && accept == 0 && alarmEnabled == TRUE)
         {
             unsigned char result = readControlByte();
             
@@ -539,7 +539,7 @@ int llwrite(const unsigned char *buf, int bufSize)
             // Set iframes if data was accepted
             else if (result == C_RR(0) || result == C_RR(1)){
                 accept = 1;
-                iFrameNumTx= (iFrameNumTx+1)%2;
+                iFrameNumTx = (iFrameNumTx+1)%2;
             }
         }
         
@@ -572,7 +572,7 @@ int llread(unsigned char *packet)
     LinkLayerState state = START;
 
     while (state!= STOP) {
-        if(read(fd, &byte,1) > 0) {
+        if(read(fd, &byte, 1) > 0) {
             bytesSent++;
 
             switch (state) {
@@ -658,7 +658,7 @@ int llread(unsigned char *packet)
                         // If bcc2 is correct we send RR(i)
                         if (bcc2 == accumulator) {
                             state = STOP;
-                            sendSupervisionFrame(A_FSENDER, C_RR(iFrameNumRx));
+                            sendFrame(A_FSENDER, C_RR(iFrameNumRx));
                             iFrameNumRx = (iFrameNumRx + 1) % 2;
                             alarm(0);
 
@@ -670,7 +670,7 @@ int llread(unsigned char *packet)
                         // If bcc2 was incorrect we send REJ(i)
                         else {
                             printf("Sending REJ\n");
-                            sendSupervisionFrame(A_FSENDER, C_REJ(iFrameNumRx));
+                            sendFrame(A_FSENDER, C_REJ(iFrameNumRx));
                             return -1;
                         }
                     } else {
@@ -714,7 +714,7 @@ int llclose(int showStatistics)
         while (state != STOP &&  (alarmCount < attempts)) {
             // Send disconnect signal
             if (alarmEnabled == FALSE) {
-                sendSupervisionFrame(A_FSENDER, C_DISC);
+                sendFrame(A_FSENDER, C_DISC);
                 alarm(timeout);
                 alarmEnabled = TRUE;
             }
@@ -775,7 +775,7 @@ int llclose(int showStatistics)
                             }
 
                         case STOP:
-                            sendSupervisionFrame(A_FSENDER,C_UA);
+                            sendFrame(A_FSENDER,C_UA);
 
                             if (tcsetattr(fd, TCSANOW, &oldtio) == -1) {
                                 perror("tcsetattr");
@@ -797,7 +797,7 @@ int llclose(int showStatistics)
         while (1) {
             // Wait for disconnection signal
             if (waitingforUA == FALSE) {
-                byte = readresponseByte(waitingforUA);
+                byte = readByte(waitingforUA);
                 if(byte == C_DISC) {
                     waitingforUA = TRUE;
                 }
@@ -805,7 +805,7 @@ int llclose(int showStatistics)
             
             // Read disconnection signal while alarm is active
             if (waitingforUA == TRUE) {
-                byte = readresponseByte(waitingforUA);
+                byte = readByte(waitingforUA);
                 // If disconnect failed exit with -1
                 if (byte == -1) {
                     return -1;
