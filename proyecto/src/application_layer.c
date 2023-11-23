@@ -234,7 +234,7 @@ void receiver(const char *serialPort, int baudRate,
         // Write data to the file descriptor
         write(fd, buffer + 3, current_size);
 
-        printf("Bytes read: %i\n", bytesRead);
+        printf("Bytes read: %i\n", current_size);
     }
 
     // Check if the first byte indicates the end of data
