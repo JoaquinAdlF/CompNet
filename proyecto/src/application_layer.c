@@ -215,7 +215,7 @@ void receiver(const char *serialPort, int baudRate,
     int bytesRead;
 
     // Read the buffer
-    while(1) {
+    while(bytesRead <= packetSize) {
         // Read until packet has no data
         bytesRead = llread(buffer);
         if(bytesRead == -1) {
