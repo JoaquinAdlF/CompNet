@@ -212,13 +212,12 @@ void receiver(const char *serialPort, int baudRate,
         size += buffer[i + 3];
     }
 
-    int bytesRead, totalBytes = 0;
+    int bytesRead;
 
     // Read the buffer
-    while(totalBytes <= packetSize) {
+    while(1) {
         // Read until packet has no data
         bytesRead = llread(buffer);
-        totalBytes += bytesRead;
         if(bytesRead == -1) {
             printf("Keep reading...\n");
             continue;
@@ -275,8 +274,10 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 {
     if (strcmp(role, "tx") == 0) {
         transmitter(serialPort, baudRate, nTries, timeout, filename);
+        return;
     } else if (strcmp(role, "rx") == 0) {
         receiver(serialPort, baudRate, nTries, timeout, filename);
+        return;
     }
     
 }
