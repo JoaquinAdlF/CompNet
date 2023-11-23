@@ -212,12 +212,13 @@ void receiver(const char *serialPort, int baudRate,
         size += buffer[i + 3];
     }
 
-    int bytesRead;
+    int bytesRead, totalBytes = 0;
 
     // Read the buffer
-    while(bytesRead <= packetSize) {
+    while(totalBytes <= packetSize) {
         // Read until packet has no data
         bytesRead = llread(buffer);
+        totalBytes += bytesRead;
         if(bytesRead == -1) {
             printf("Keep reading...\n");
             continue;
