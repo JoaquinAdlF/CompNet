@@ -21,11 +21,34 @@
 #define SV_TRANSFER_COMPLETE    226
 #define SV_GOODBYE              221
 
-struct data {
+struct DATA {
     char user[MAX_LENGTH];
     char password[MAX_LENGTH];
     char domain[MAX_LENGTH];
     char filePath[MAX_LENGTH];
     char ip[MAX_LENGTH];
 };
+
+typedef enum {
+    START,
+    SINGLE,
+    MULTIPLE,
+    END
+} State;
+
+int parseArguments(char *input, struct DATA *data);
+
+int createSocket(char *ip, int port);
+
+int authenticate(const int socket, const char *user, const char *password);
+
+int readResponse(const int socket, char *buffer);
+
+int passiveMode(const int socket, char *ip, int *port);
+
+int requestFile(const int socket, const char *filePath);
+
+int getFile(const int socketA, const int socketB, const char *filePath);
+
+int closeConnection(const int socketA, const int socketB);
 
