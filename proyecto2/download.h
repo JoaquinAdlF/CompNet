@@ -26,6 +26,7 @@ struct DATA {
     char password[MAX_LENGTH];
     char domain[MAX_LENGTH];
     char filePath[MAX_LENGTH];
+    char fileName[MAX_LENGTH];
     char ip[MAX_LENGTH];
 };
 
@@ -40,9 +41,9 @@ int parseArguments(char *input, struct DATA *data);
 
 int createSocket(char *ip, int port);
 
-int authenticate(const int socket, const char *user, const char *password);
+int authenticateUser(const int socket, const char *user, const char *password);
 
-int readResponse(const int socket, char *buffer);
+int readResponse(const int socket, char *response);
 
 int passiveMode(const int socket, char *ip, int *port);
 
@@ -50,5 +51,5 @@ int requestFile(const int socket, const char *filePath);
 
 int getFile(const int socketA, const int socketB, const char *filePath);
 
-int closeConnection(const int socketA, const int socketB);
+int closeSockets(const int socketA, const int socketB);
 
