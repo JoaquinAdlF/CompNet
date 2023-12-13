@@ -59,7 +59,7 @@ int createSocket(char *ip, int port) {
     return sockfd;
 }
 
-/*
+
 int readResponse(const int socket, char *response) {
     FILE *socketfd = fdopen(socket, "r");
 
@@ -94,9 +94,9 @@ int readResponse(const int socket, char *response) {
     printf("Final response: %s\n", response);
     return code;
 }
-*/
 
 
+/*
 int readResponse(const int socket, char *response) {
     char byte;
     int index = 0, responseCode;
@@ -136,7 +136,7 @@ int readResponse(const int socket, char *response) {
     return responseCode;
 
 }
-
+*/
 
 
 int authenticateUser(const int socket, const char *user, const char *password) {
