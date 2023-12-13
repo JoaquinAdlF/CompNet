@@ -42,7 +42,5 @@ int passiveMode(const int socket, char *ip, int *port);
 
 int requestFile(const int socket, const char *filePath);
 
-int getFile(const int socketA, const int socketB, const char *filePath);
-
-int closeSockets(const int socketA, const int socketB);
+int getFile(const int socketA, const int socketB, const char *fileName);
 

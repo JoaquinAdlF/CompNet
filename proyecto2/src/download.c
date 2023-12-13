@@ -1,4 +1,4 @@
-#include "download.h"
+#include "../include/download.h"
 
 int parseArguments(char *input, struct DATA *data) {
 
@@ -21,17 +21,15 @@ int parseArguments(char *input, struct DATA *data) {
     }
 
     sscanf(input, "%*[^/]//%*[^/]/%s", data->filePath);
-    strcpy(data->file, strrchr(input, '/')+1);
+    strcpy(data->fileName, strrchr(input, '/')+1);
     
     struct hostent *h;
-    if (h = gethostbyname(data->domain) == NULL || strlen(data->domain) == 0) {
+    if (h == gethostbyname(data->domain) == NULL) {
         perror("Invalid hostname.\n");
         exit(-1);
     }
 
-    char *tmp;
-    tmp = inet_ntoa(*((struct in_addr *)h->h_addr));
-    strcpy(data->ip, tmp);
+    strcpy(data->ip, inet_ntoa(*((struct in_addr *) h->h_addr)));
 
     if (strlen(data->domain) && strlen(data->user) && strlen(data->password) && strlen(data->filePath) && strlen(data->fileName)) {
         perror("Data incomplete.\n");
@@ -47,7 +45,7 @@ int createSocket(char *ip, int port) {
 
     bzero((char *) &server_addr, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(SERVER_ADDR);
+    server_addr.sin_addr.s_addr = inet_addr(ip);
     server_addr.sin_port = htons(port);
 
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -71,7 +69,7 @@ int createSocket(char *ip, int port) {
 }
 
 int readResponse(const int socket, char *response) {
-    FILE socketfd = fopen(socket, "r");
+    FILE *socketfd = fdopen(socket, "r");
 
     char *buf;
     size_t bytesRead = 0;
@@ -122,15 +120,15 @@ int passiveMode(const int socket, char *ip, int *port) {
         exit(-1);
     }
 
-    sscanf(answer,"%*[^(](%d,%d,%d,%d,%d,%d)%*[^\n$)]", &h1, &h2, &h3, &h4, &p1, &p2);
+    sscanf(response,"%*[^(](%d,%d,%d,%d,%d,%d)%*[^\n$)]", &h1, &h2, &h3, &h4, &p1, &p2);
     sprintf(ip, "%d.%d.%d.%d", h1, h2, h3, h4);
 
     return 0;
 }
 
-int requestFile(const int socket, char *filePath) {
+int requestFile(const int socket, const char *filePath) {
     char buffer[5 + strlen(filePath) + 1], response[MAX_LENGTH];
-    sprintf(buffer, "RETR %s\n", sizeof(buffer));
+    sprintf(buffer, "RETR %s\n", filePath);
     write(socket, buffer, sizeof(buffer));
     if (readResponse(socket, response) != FILEFOUND) {
         perror("File not found.\n");
@@ -138,7 +136,7 @@ int requestFile(const int socket, char *filePath) {
     }
 }
 
-int getFile(const int socket, const int dataSocket, char *fileName) {
+int getFile(const int socketfd, const int dataSocket, const char *fileName) {
     FILE *fd = fopen(fileName, "wb");
     if (fd == NULL) {
         perror("Error creating file.\n");
@@ -153,23 +151,16 @@ int getFile(const int socket, const int dataSocket, char *fileName) {
             exit(-1);
         }
     }
-    fd(close);
+    close(fd);
 
     char response[MAX_LENGTH];
     
-    if (readResponse(socket, response) != TRANSFERSUCCESS) {
+    if (readResponse(socketfd, response) != TRANSFERSUCCESS) {
         perror("Error during transfer.\n");
-        exit(-1)
+        exit(-1);
     }
 
     return 0;
-}
-
-int closeConnection(const int socketfd, const int dataSocket) {
-    char answer[MAX_LENGTH];
-    write(socketA, "quit\n", 5);
-    if(readResponse(socketA, answer) != SV_GOODBYE) return -1;
-    return close(socketA) || close(socketB);
 }
 
 int main(int argc, char *argv[]) {
