@@ -13,13 +13,13 @@
 #define FTP_PORT    21
 
 /* Server responses */
-#define SV_READY4AUTH           220
-#define SV_READY4PASS           331
-#define SV_LOGINSUCCESS         230
-#define SV_PASSIVE              227
-#define SV_READY4TRANSFER       150
-#define SV_TRANSFER_COMPLETE    226
-#define SV_GOODBYE              221
+#define SOCKETSUCCESS           220
+#define USERFOUND               331
+#define LOGINSUCCESS            230
+#define PASSIVEMODE             227
+#define FILEFOUND               150
+#define TRANSFERSUCCESS         226
+#define SOCKETEND               221
 
 struct DATA {
     char user[MAX_LENGTH];
@@ -29,13 +29,6 @@ struct DATA {
     char fileName[MAX_LENGTH];
     char ip[MAX_LENGTH];
 };
-
-typedef enum {
-    START,
-    SINGLE,
-    MULTIPLE,
-    END
-} State;
 
 int parseArguments(char *input, struct DATA *data);
 
