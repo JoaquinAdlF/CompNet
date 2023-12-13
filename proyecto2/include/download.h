@@ -30,6 +30,13 @@ struct DATA {
     char ip[MAX_LENGTH];
 };
 
+typedef enum {
+    START,
+    SINGLE,
+    MULTI,
+    END
+} State;
+
 int parseArguments(char *input, struct DATA *data);
 
 int createSocket(char *ip, int port);
